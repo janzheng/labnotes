@@ -1,0 +1,2 @@
+- this is not a deno project, so no need to use npm: or jsr: for packages
+- always use yarn to install packages

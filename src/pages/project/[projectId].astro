@@ -2,20 +2,20 @@
 export const prerender = false;
 import "@/styles/globals.css";
 
-// import Welcome from "@/components/astro/Welcome.astro";
 import Layout from "@/layouts/Layout.astro";
 import { ProjectWorkspace } from "@/components/ProjectWorkspace";
 import ChatContainer from "@/components/react/ChatContainer";
-
-// import { Button } from "@/components/ui/button";
 ---
 
 <Layout>
   <div class="flex flex-col h-screen">
-    <ChatContainer client:only="react">
-      <div class="flex-1">
-        <ProjectWorkspace client:only="react" />
-      </div>
-    </ChatContainer>
+    <div class="h-[40vh] border-t">
+      <ChatContainer client:only="react">
+        <div class="flex-1">
+          <ProjectWorkspace client:only="react" />
+        </div>
+      </ChatContainer>
+    </div>
   </div>
 </Layout>
+
