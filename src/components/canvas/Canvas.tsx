@@ -5,6 +5,11 @@ import TypeA from './TypeA';
 import TypeB from './TypeB';
 import TypeC from './TypeC';
 import Chat from './Chat';
+import StreamChat from './StreamChat';
+import CodeGen from './CodeGen';
+import LocalChat from './LocalChat';
+import LocalSpeech from './LocalSpeech';
+import Emojis from './Emojis';
 
 // Component map for easy lookup
 const COMPONENT_MAP = {
@@ -12,6 +17,11 @@ const COMPONENT_MAP = {
   'TypeB': TypeB,
   'TypeC': TypeC,
   'Chat': Chat,
+  'StreamChat': StreamChat,
+  'CodeGen': CodeGen,
+  'LocalChat': LocalChat,
+  'LocalSpeech': LocalSpeech,
+  'Emojis': Emojis,
 } as const;
 
 // Component selection interface shown when no components are assigned

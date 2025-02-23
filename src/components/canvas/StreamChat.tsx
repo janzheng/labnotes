@@ -1,17 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { BaseComponent, type BaseComponentProps } from '@/components/canvas/BaseComponent';
+import { BaseComponent, type BaseComponentProps } from './BaseComponent';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import ReactMarkdown from 'react-markdown';
 import { actions } from 'astro:actions';
 import type { ChatData } from '@/lib/stores';
 import projectsStore from '@/lib/stores';
-import ReactMarkdown from 'react-markdown';
+import { nanoid } from 'nanoid';
 import { useBasic, useQuery } from '@basictech/react';
-import type { ComponentConfig } from '@/lib/stores';
 
-export const Chat: React.FC<BaseComponentProps> = ({ config }) => {
+export const StreamChat: React.FC<BaseComponentProps> = ({ config }) => {
   const [loading, setLoading] = useState(false);
   const [input, setInput] = useState('');
+  const [currentStreamingMessage, setCurrentStreamingMessage] = useState('');
+  const [userPrompt, setUserPrompt] = useState('');
   const { db, isSignedIn } = useBasic();
   
   // Get remote project data
@@ -94,19 +96,33 @@ export const Chat: React.FC<BaseComponentProps> = ({ config }) => {
   const chatData = (config.data || {}) as ChatData;
   const messages = chatData.messages || [];
 
-  const updateProjectStore = async (newData: ChatData, shouldSyncRemote = true) => {
+  const updateProjectStore = async (newData: ChatData | { 
+    prompt: string; 
+    settings: { model: string; provider: string; }; 
+    response: string;
+    timestamp: string;
+    id: string;
+  }, shouldSyncRemote = true) => {
     const currentState = projectsStore.get();
     const project = currentState.items[config.projectId];
-
+    
     if (!project || project.type !== 'project') {
       console.error('Project not found or invalid type');
       return;
     }
 
+    // If newData is a message, convert it to ChatData format
+    const updatedData: ChatData = 'messages' in newData ? newData : {
+      messages: [
+        ...(((project.components[config.componentIndex].data || {}) as ChatData).messages || []),
+        newData
+      ]
+    };
+
     const updatedComponents = [...project.components];
     updatedComponents[config.componentIndex] = {
       ...updatedComponents[config.componentIndex],
-      data: newData
+      data: updatedData
     };
 
     projectsStore.set({
@@ -122,7 +138,7 @@ export const Chat: React.FC<BaseComponentProps> = ({ config }) => {
 
     // Only sync to remote if flag is true
     if (shouldSyncRemote) {
-      await syncToRemote(newData);
+      await syncToRemote(updatedData);
     }
   };
 
@@ -130,45 +146,85 @@ export const Chat: React.FC<BaseComponentProps> = ({ config }) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
 
+    const promptText = input.trim(); // Store the input before clearing it
+    setUserPrompt(promptText); // Set the prompt for display
+    
     try {
       setLoading(true);
-
-      const messageHistory = messages.length === 0
-        ? [{ role: "user", content: input.trim() }]
+      setCurrentStreamingMessage(''); // Reset streaming message
+      setInput(''); // Clear input early
+      
+      const messageHistory = messages.length === 0 
+        ? [{ role: "user", content: promptText }]
         : [
-          ...messages.map(msg => ({
-            role: "user",
-            content: msg.prompt || ""
-          })),
-          ...messages.map(msg => ({
-            role: "assistant",
-            content: msg.response || ""
-          })),
-          { role: "user", content: input.trim() }
-        ];
+            ...messages.map(msg => ({
+              role: "user",
+              content: msg.prompt || ""
+            })),
+            ...messages.map(msg => ({
+              role: "assistant",
+              content: msg.response || ""
+            })),
+            { role: "user", content: promptText }
+          ];
 
-      const { data, error } = await actions.canvas.chat({
-        model: 'llama-3.1-8b-instant',
-        provider: 'groq',
-        projectId: config.projectId,
-        componentIndex: config.componentIndex,
-        messages: messageHistory
+      const response = await fetch('/api/stream-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'llama-3.3-70b-specdec',
+          provider: 'groq',
+          messages: messageHistory
+        })
       });
 
-      if (error) {
-        console.error('Error calling Chat action:', error);
-        return;
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullResponse = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        
+        const text = decoder.decode(value);
+        const lines = text.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+            
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed && typeof parsed === 'string') {
+                fullResponse += parsed;
+                setCurrentStreamingMessage(prev => prev + parsed);
+              }
+            } catch (e) {
+              console.warn('Failed to parse streaming data:', e);
+            }
+          }
+        }
       }
 
-      // Update the store with the new message
-      const updatedChatData: ChatData = {
-        messages: [...messages, data]
+      // After streaming is complete, update the store with the final message
+      const newMessage = {
+        prompt: promptText,
+        settings: { model: 'llama-3.1-8b-instant', provider: 'groq' },
+        response: fullResponse,
+        timestamp: new Date().toISOString(),
+        id: nanoid()
       };
-      
-      await updateProjectStore(updatedChatData);
-      setInput('');
+
+      updateProjectStore(newMessage);
+      setCurrentStreamingMessage(''); // Clear streaming message after storing
+      setUserPrompt(''); // Clear the prompt after storing
+
     } catch (error) {
-      console.error('Error calling Chat action:', error);
+      console.error('Error in chat stream:', error);
+      setCurrentStreamingMessage('Error: Failed to get response');
     } finally {
       setLoading(false);
     }
@@ -176,9 +232,10 @@ export const Chat: React.FC<BaseComponentProps> = ({ config }) => {
 
   return (
     <div className="bg-slate-50 p-4 border rounded-lg">
-      <h2 className="text-lg font-semibold mb-2">Chat Component</h2>
-
+      <h2 className="text-lg font-semibold mb-2">Stream Chat Component</h2>
+      
       <div className="space-y-4">
+        {/* Messages display */}
         {messages.length > 0 && (
           <div className="mt-4 space-y-2">
             {messages.map(message => (
@@ -198,6 +255,19 @@ export const Chat: React.FC<BaseComponentProps> = ({ config }) => {
           </div>
         )}
 
+        {/* Only show streaming message if there isn't a stored message with the same content */}
+        {currentStreamingMessage && (
+          <div className="p-3 bg-white rounded-md">
+            <p className="text-sm font-medium">Message: {userPrompt}</p>
+            <div className="text-sm mt-2 prose prose-sm max-w-none">
+              <ReactMarkdown>
+                {currentStreamingMessage}
+              </ReactMarkdown>
+            </div>
+          </div>
+        )}
+
+        {/* Input form */}
         <form onSubmit={handleSubmit} className="flex gap-2">
           <Input
             value={input}
@@ -215,4 +285,4 @@ export const Chat: React.FC<BaseComponentProps> = ({ config }) => {
   );
 };
 
-export default Chat; 
+export default StreamChat; 

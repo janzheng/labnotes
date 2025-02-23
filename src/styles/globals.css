@@ -3,6 +3,11 @@
 
 @plugin "tailwindcss-animate";
 
+@import "./project-container.scss";
+@import "./codegen.scss";
+
+
+
 @custom-variant dark (&:is(.dark *));
 
 /* @tailwind base;

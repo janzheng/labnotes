@@ -2,7 +2,7 @@ import { atom } from 'nanostores';
 import { nanoid } from 'nanoid';
 import { createStorage } from 'unstorage';
 import localStorageDriver from 'unstorage/drivers/localstorage';
-import type { ProjectsState } from './types';
+import type { ComponentType, ProjectsState, Project, ComponentConfig } from './types';
 import { initialState } from './initialState';
 
 // Initialize storage with proper localStorage configuration
@@ -13,61 +13,34 @@ const storage = createStorage({
   })
 });
 
-// Add loading and error states
+// State atoms
 export const isLoading = atom(true);
 export const error = atom<string | null>(null);
 export const isInitialized = atom(false);
-
 export const isSidebarOpen = atom(true);
 export const selectedProjectId = atom<string | null>(null);
-
-// Types
-export type ComponentType = 'TypeA' | 'TypeB' | 'TypeC' | 'Chat';
-
-export type ComponentConfig = {
-  type: ComponentType;
-  data?: Record<string, any>; // Flexible data structure for future use
-  id?: string; // Add an ID field for component instances
-};
-
-// Add TypeC specific type
-export type TypeCData = {
-  responses: Array<{
-    message: string;
-    timestamp: string;
-    id: string;
-  }>;
-};
-
-// Add Chat specific type
-export type ChatData = {
-  messages: Array<{
-    text: string;
-    settings: {
-      model: string;
-      provider: string;
-    };
-    response: string;
-    timestamp: string;
-    id: string;
-  }>;
-};
-
-export type Project = {
-  id: string;
-  name: string;
-  parentId: string | null; // null means root level, otherwise points to a folder
-  type: 'folder' | 'project';
-  children?: string[]; // Only for folders - contains IDs of children
-  components?: ComponentConfig[]; // Array of components assigned to this project
-};
-
-// Modified store initialization
 export const projectsStore = atom<ProjectsState>(initialState);
 
-// Initialize store from storage
+// URL selection logic
+export const selectProjectFromUrl = () => {
+  if (typeof window === 'undefined') return;
+  
+  const path = window.location.pathname;
+  const matches = path.match(/\/project\/([^/]+)/);
+  
+  if (matches && matches[1]) {
+    const projectId = matches[1];
+    const state = projectsStore.get();
+    
+    // Only select if project exists
+    if (state.items[projectId]) {
+      selectedProjectId.set(projectId);
+    }
+  }
+};
+
+// Store initialization
 async function initializeStore() {
-  // Only initialize if we're in the browser
   if (typeof window === 'undefined') {
     isInitialized.set(true);
     isLoading.set(false);
@@ -82,6 +55,8 @@ async function initializeStore() {
       projectsStore.set(storedState as ProjectsState);
     }
     isInitialized.set(true);
+    // Add URL-based selection after state is loaded
+    selectProjectFromUrl();
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Failed to load stored state';
     error.set(errorMessage);
@@ -91,7 +66,7 @@ async function initializeStore() {
   }
 }
 
-// Persist store changes with error handling
+// Store persistence
 projectsStore.listen(async (state) => {
   try {
     error.set(null);
@@ -103,13 +78,7 @@ projectsStore.listen(async (state) => {
   }
 });
 
-const arrayMove = <T,>(array: T[], from: number, to: number): T[] => {
-  const newArray = array.slice();
-  newArray.splice(to < 0 ? newArray.length + to : to, 0, newArray.splice(from, 1)[0]);
-  return newArray;
-};
-
-// Modified addProject with loading state
+// Project operations
 export const addProject = async (name: string, parentId: string | null = null) => {
   try {
     isLoading.set(true);
@@ -136,6 +105,13 @@ export const addProject = async (name: string, parentId: string | null = null) =
     }
 
     await projectsStore.set(newState);
+    
+    // Navigate to the new project URL
+    if (typeof window !== 'undefined') {
+      window.history.pushState({}, '', `/project/${id}`);
+      selectedProjectId.set(id);
+    }
+    
     return id;
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Failed to add project';
@@ -276,7 +252,7 @@ export const deleteProject = (projectId: string) => {
   });
 };
 
-// Add these new functions after the existing store operations
+// Component operations
 export const assignComponentToProject = (projectId: string, componentType: ComponentType, initialData: Record<string, any> = {}) => {
   const currentState = projectsStore.get();
   const project = currentState.items[projectId];
@@ -325,12 +301,12 @@ export const removeComponentFromProject = (projectId: string, componentIndex: nu
   });
 };
 
-// Initialize the store when the module loads, but only in the browser
+// Initialize store in browser
 if (typeof window !== 'undefined') {
   initializeStore();
 }
 
-// Re-export types for convenience
+// Re-export types
 export * from './types';
 
 export default projectsStore; 

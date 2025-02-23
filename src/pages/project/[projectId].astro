@@ -3,19 +3,11 @@ export const prerender = false;
 import "@/styles/globals.css";
 
 import Layout from "@/layouts/Layout.astro";
-import { ProjectWorkspace } from "@/components/ProjectWorkspace";
-import ChatContainer from "@/components/react/ChatContainer";
+import { ProjectBasicWrapper } from "@/components/react/ProjectBasicWrapper";
 ---
 
 <Layout>
   <div class="flex flex-col h-screen">
-    <div class="h-[40vh] border-t">
-      <ChatContainer client:only="react">
-        <div class="flex-1">
-          <ProjectWorkspace client:only="react" />
-        </div>
-      </ChatContainer>
-    </div>
+    <ProjectBasicWrapper client:only="react" />
   </div>
 </Layout>
-

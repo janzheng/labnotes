@@ -1,5 +1,14 @@
 // Component Types
-export type ComponentType = 'TypeA' | 'TypeB' | 'TypeC' | 'Chat';
+export type ComponentType = 
+  | 'TypeA' 
+  | 'TypeB' 
+  | 'TypeC' 
+  | 'Chat' 
+  | 'StreamChat' 
+  | 'CodeGen' 
+  | 'LocalChat' 
+  | 'LocalSpeech'
+  | 'Emojis';
 
 export type ComponentConfig = {
   type: ComponentType;
@@ -26,6 +35,7 @@ export type ChatData = {
     response: string;
     timestamp: string;
     id: string;
+    markdown?: boolean;
   }>;
 };
 
@@ -42,4 +52,28 @@ export type Project = {
 export type ProjectsState = {
   items: Record<string, Project>;
   rootIds: string[]; // IDs of root level items
+};
+
+// Add CodeGen specific types
+export type CodeGenBlock = {
+  id: string;
+  type: 'editor' | 'metadata' | 'settings';
+  content: string;
+  timestamp: string;
+};
+
+export type CodeGenSettings = {
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
+};
+
+export type CodeGenData = {
+  blocks: CodeGenBlock[];
+  settings: CodeGenSettings;
+  metadata: {
+    title?: string;
+    description?: string;
+    tags?: string[];
+  };
 }; 

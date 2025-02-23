@@ -3,20 +3,22 @@ import { useStore } from '@nanostores/react';
 import { projectsStore, selectedProjectId, addProject, addFolder, moveProject, deleteProject, type Project, isLoading, error, isInitialized } from '@/lib/stores';
 import {
   Sidebar,
+  SidebarFooter,
   SidebarContent,
   SidebarGroup,
-  SidebarGroupAction,
   SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { FolderIcon, FileIcon, PlusIcon, XIcon, ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
+import { FolderIcon, FileIcon, FilePlusIcon, XIcon, ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useDroppable } from "@dnd-kit/core";
+import { BasicAuthButton } from '@/components/auth/BasicAuthButton';
+import { useBasic } from '@basictech/react';
 
 // -----------------------------------------------------------------------------
 // DropZone Component
@@ -47,7 +49,7 @@ const DropZone: React.FC<DropZoneProps> = ({ parentId, index, level }) => {
       ref={setNodeRef}
       id={dropzoneId}
       style={{
-        height: isOver ? '2px' : '0px',
+        height: isOver ? '2px' : '2px',
         backgroundColor: isOver ? '#3498db' : 'rgba(0, 0, 0, 0)',
         marginLeft: level * 12,
         transition: 'background-color 0.2s ease',
@@ -66,16 +68,48 @@ type ProjectItemProps = {
   onProjectClick?: (projectId: string) => void;
 };
 
+type FolderStates = Record<string, boolean>;
+
+const FOLDER_STATES_KEY = 'folder-states';
+
+const loadFolderStates = (): FolderStates => {
+  if (typeof window === 'undefined') return {};
+  const stored = localStorage.getItem(FOLDER_STATES_KEY);
+  return stored ? JSON.parse(stored) : {};
+};
+
+const saveFolderStates = (states: FolderStates) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(FOLDER_STATES_KEY, JSON.stringify(states));
+};
+
 const ProjectItem: React.FC<ProjectItemProps> = ({ project, level = 0, dragHandleProps, onProjectClick }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(project.name);
   const store = useStore(projectsStore);
+  
+  const [folderStates, setFolderStates] = useState<FolderStates>({});
+  
+  useEffect(() => {
+    if (project.type === 'folder') {
+      const states = loadFolderStates();
+      setFolderStates(states);
+    }
+  }, [project.type]);
+
+  const isExpanded = project.type === 'folder' ? 
+    (folderStates[project.id] !== false) : // default to true if not set
+    false;
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (project.type === 'folder') {
-      setIsExpanded(!isExpanded);
+      const newStates = {
+        ...folderStates,
+        [project.id]: !isExpanded
+      };
+      setFolderStates(newStates);
+      saveFolderStates(newStates);
     } else if (onProjectClick) {
       onProjectClick(project.id);
     }
@@ -135,6 +169,7 @@ const ProjectItem: React.FC<ProjectItemProps> = ({ project, level = 0, dragHandl
                 onChange={e => setNewName(e.target.value)}
                 onBlur={handleNameSubmit}
                 autoFocus
+                onFocus={(e) => e.target.select()}
                 className="relative bg-gray-50 h-8 !border-gray-400 px-2 pt-0 leading-normal baseline focus:outline-none focus:ring-0 ring-offset-0 focus:ring-offset-0 [&:focus]:ring-offset-0 [&:focus-visible]:ring-0 [&:focus-visible]:ring-offset-0"
               />
             </form>
@@ -219,6 +254,7 @@ export function ProjectSidebar() {
   const [isClient, setIsClient] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hoverLevel, setHoverLevel] = useState(0);
+  const { db, isSignedIn } = useBasic();
 
   // Reduced activation distance makes drag‐start a bit more lenient.
   const sensors = useSensors(useSensor(PointerSensor, {
@@ -237,7 +273,7 @@ export function ProjectSidebar() {
     }
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
     setActiveId(null);
     
@@ -249,6 +285,7 @@ export function ProjectSidebar() {
       const targetParentId = parts[1] === "root" ? null : parts[1];
       const targetIndex = parseInt(parts[2], 10);
       moveProject(active.id, targetParentId, targetIndex);
+      
       return;
     }
     
@@ -262,6 +299,7 @@ export function ProjectSidebar() {
     // If dropping directly onto a folder header, drop inside the folder (at index 0)
     if (overItem.type === 'folder') {
       moveProject(active.id, overItem.id, 0);
+
       return;
     }
 
@@ -272,6 +310,7 @@ export function ProjectSidebar() {
     
     if (targetIndex === -1) return;
     moveProject(active.id, targetParentId, targetIndex);
+    
   };
 
   const handleDragOver = (event: any) => {
@@ -306,16 +345,22 @@ export function ProjectSidebar() {
     return level;
   };
 
-  const handleAddFolder = () => {
-    addFolder('New Folder');
+  const handleAddFolder = async () => {
+    const folderId = await addFolder('New Folder');
   };
 
-  const handleAddProject = () => {
-    addProject('New Project');
+  const handleAddProject = async () => {
+    const projectId = await addProject('New Project');
+
   };
 
   const handleProjectClick = (projectId: string) => {
     selectedProjectId.set(projectId);
+  };
+
+
+  const handleDelete = async (projectId: string) => {
+    await deleteProject(projectId);
   };
 
   const renderContent = () => {
@@ -358,7 +403,7 @@ export function ProjectSidebar() {
               <FolderIcon size={14} />
             </Button>
             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleAddProject}>
-              <FileIcon size={14} />
+              <FilePlusIcon size={14} />
             </Button>
           </div>
         </div>
@@ -373,7 +418,7 @@ export function ProjectSidebar() {
           >
             <div>
               {store.rootIds.map((id, i) => (
-                <React.Fragment key={"root-fragment-" + id}>
+                <React.Fragment key={`root-fragment-${id}-${i}`}>
                   <DropZone parentId={null} index={i} level={0} />
                   {store.items[id] && (
                     <SortableProjectItem 
@@ -400,10 +445,10 @@ export function ProjectSidebar() {
           </DndContext>
         ) : (
           <SidebarMenu className="list-none [&_li]:list-none">
-            {store.rootIds.map(id => (
+            {store.rootIds.map((id, i) => (
               store.items[id] && (
                 <ProjectItem 
-                  key={id} 
+                  key={`menu-item-${id}-${i}`}
                   project={store.items[id]} 
                   onProjectClick={handleProjectClick}
                 />
@@ -416,10 +461,13 @@ export function ProjectSidebar() {
   };
 
   return (
-    <Sidebar variant="inset">
+    <Sidebar variant="">
       <SidebarContent>
         {renderContent()}
       </SidebarContent>
+      <SidebarFooter className="space-y-2">
+        <BasicAuthButton />
+      </SidebarFooter>
     </Sidebar>
   );
 } 

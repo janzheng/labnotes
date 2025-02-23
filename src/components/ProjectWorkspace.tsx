@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { useStore } from '@nanostores/react';
 import { projectsStore, selectedProjectId, assignComponentToProject, type ComponentType, isLoading, error, isInitialized } from '@/lib/stores';
 import Canvas from './canvas/Canvas';
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { useBasic } from '@basictech/react'
 
 export const ProjectWorkspace: React.FC = () => {
   const store = useStore(projectsStore);
@@ -9,6 +11,7 @@ export const ProjectWorkspace: React.FC = () => {
   const loading = useStore(isLoading);
   const storeError = useStore(error);
   const initialized = useStore(isInitialized);
+  const { isSignedIn, signin, user, db } = useBasic()
   
   // Sync URL with selected project
   useEffect(() => {
@@ -35,9 +38,9 @@ export const ProjectWorkspace: React.FC = () => {
   
   const selectedProject = currentProjectId ? store.items[currentProjectId] : null;
 
-  const handleAssignType = (type: ComponentType) => {
+  const handleAssignType = async (type: ComponentType) => {
     if (currentProjectId) {
-      assignComponentToProject(currentProjectId, type);
+      await assignComponentToProject(currentProjectId, type);
     }
   };
 
@@ -69,6 +72,7 @@ export const ProjectWorkspace: React.FC = () => {
     <div className="flex h-screen">
       {/* Main content area */}
       <div className="flex-1 overflow-auto">
+        <SidebarTrigger className="m-2 ml-4 p-2 relative top-[2px]" />
         <Canvas 
           project={selectedProject?.type === 'project' ? selectedProject : undefined}
           onAssignType={handleAssignType}

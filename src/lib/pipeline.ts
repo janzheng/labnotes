@@ -33,3 +33,21 @@ export async function executePipeline(pipeline: any[], settings: any = {}, useLo
     console.error("Error in executePipeline:", error);
   }
 }
+
+export async function executeStreamingPipeline(pipeline: any[], settings: any = {}) {
+  const response = await fetch('http://localhost:9999/stream-function', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      functionName: "gen",
+      settings: {
+        ...pipeline[0].settings,
+        outputType: "stream"
+      }
+    })
+  });
+
+  return response;
+}
