@@ -1,0 +1,19 @@
+---
+export const prerender = false;
+import "@/styles/globals.css";
+
+
+// import Welcome from "@/components/astro/Welcome.astro";
+import Layout from "@/layouts/Layout.astro";
+// import { ProjectBasicWrapper } from "@/components/react/ProjectBasicWrapper";
+
+import TailwindAdvancedEditor from "@/components/extensions/novel-tw/advanced-editor.tsx";
+
+// import { Button } from "@/components/ui/button";
+---
+
+<Layout>
+  <div class="">
+    <TailwindAdvancedEditor client:only="react" />
+  </div>
+</Layout>

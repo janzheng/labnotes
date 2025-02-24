@@ -10,6 +10,7 @@ import CodeGen from './CodeGen';
 import LocalChat from './LocalChat';
 import LocalSpeech from './LocalSpeech';
 import Emojis from './Emojis';
+import Novel from './Novel';
 
 // Component map for easy lookup
 const COMPONENT_MAP = {
@@ -22,6 +23,7 @@ const COMPONENT_MAP = {
   'LocalChat': LocalChat,
   'LocalSpeech': LocalSpeech,
   'Emojis': Emojis,
+  'Novel': Novel,
 } as const;
 
 // Component selection interface shown when no components are assigned

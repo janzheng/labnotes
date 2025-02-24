@@ -12,7 +12,7 @@ export const Emojis: React.FC<BaseComponentProps> = ({ config }) => {
   const { db, isSignedIn } = useBasic();
   
   // Get remote emojis
-  const remoteProject = useQuery(() => 
+  let remoteProject = useQuery(() => 
     db?.collection('projects')
       .getAll()
       .then(projects => projects.find(p => p.localId === config.projectId))

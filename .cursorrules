@@ -1,2 +1,3 @@
 - this is not a deno project, so no need to use npm: or jsr: for packages
 - always use yarn to install packages
+- always use import.meta.env.OPENAI_API_KEY to get the OPENAI_API_KEY or other keys
