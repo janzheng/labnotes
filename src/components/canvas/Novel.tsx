@@ -152,7 +152,7 @@ const Novel: React.FC<{ config: ComponentConfig }> = ({ config }) => {
     return defaultData;
   });
 
-  const updateProjectStore = async (updatedData: NovelData) => {
+  const updateProjectStore = async (updatedData: NovelData, shouldSyncRemote = true) => {
     const currentState = projectsStore.get();
     const project = currentState.items[config.projectId];
 
@@ -178,7 +178,9 @@ const Novel: React.FC<{ config: ComponentConfig }> = ({ config }) => {
       }
     });
 
-    await syncToRemote(updatedData);
+    if (shouldSyncRemote) {
+      await syncToRemote(updatedData);
+    }
   };
 
   const addBlock = (type: NovelBlock['type'] = 'editor') => {

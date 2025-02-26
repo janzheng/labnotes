@@ -1,6 +1,7 @@
 import { CommandGroup, CommandItem, CommandSeparator } from "../ui/command";
 import { useEditor } from "@/components/extensions/novel-src";
 import { Check, TextQuote, TrashIcon } from "lucide-react";
+import { useEffect } from "react";
 
 const AICompletionCommands = ({
   completion,
@@ -10,6 +11,26 @@ const AICompletionCommands = ({
   onDiscard: () => void;
 }) => {
   const { editor } = useEditor();
+  
+  // Helper function to insert content below
+  const insertBelow = () => {
+    const selection = editor.view.state.selection;
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(selection.to + 1, completion)
+      .run();
+  };
+  
+  // Auto-insert if there's no actual selection
+  useEffect(() => {
+    const selection = editor.view.state.selection;
+    // Check if this is a cursor position rather than a selection
+    if (selection.from === selection.to) {
+      insertBelow();
+    }
+  }, []);
+  
   return (
     <>
       <CommandGroup>
@@ -38,14 +59,7 @@ const AICompletionCommands = ({
         <CommandItem
           className="gap-2 px-4"
           value="insert"
-          onSelect={() => {
-            const selection = editor.view.state.selection;
-            editor
-              .chain()
-              .focus()
-              .insertContentAt(selection.to + 1, completion)
-              .run();
-          }}
+          onSelect={insertBelow}
         >
           <TextQuote className="h-4 w-4 text-muted-foreground" />
           Insert below

@@ -1774,6 +1774,13 @@
     lightningcss "^1.29.1"
     tailwindcss "4.0.7"
 
+"@tippyjs/react@^4.2.6":
+  version "4.2.6"
+  resolved "https://registry.yarnpkg.com/@tippyjs/react/-/react-4.2.6.tgz#971677a599bf663f20bb1c60a62b9555b749cc71"
+  integrity sha512-91RicDR+H7oDSyPycI13q3b7o4O60wa2oRbjlz2fyRLmHImc4vyDwuUP8NtZaN0VARJY5hybvDYrFzhY9+Lbyw==
+  dependencies:
+    tippy.js "^6.3.1"
+
 "@tiptap/core@^2.11.5":
   version "2.11.5"
   resolved "https://registry.yarnpkg.com/@tiptap/core/-/core-2.11.5.tgz#2bf1b08c4ca2467778d0a109634c45ab475522f4"
@@ -3449,6 +3456,11 @@ is-docker@^3.0.0:
   version "3.0.0"
   resolved "https://registry.npmjs.org/is-docker/-/is-docker-3.0.0.tgz"
   integrity sha512-eljcgEDlEns/7AXFosB5K/2nCM4P7FQPkGc/DWLy5rmFEWvZayGrik1d9/QIY5nJ4f9YsVvBkA6kJpHn9rISdQ==
+
+is-emoji-supported@^0.0.5:
+  version "0.0.5"
+  resolved "https://registry.yarnpkg.com/is-emoji-supported/-/is-emoji-supported-0.0.5.tgz#f22301b22c63d6322935e829f39dfa59d03a7fe2"
+  integrity sha512-WOlXUhDDHxYqcSmFZis+xWhhqXiK2SU0iYiqmth5Ip0FHLZQAt9rKL5ahnilE8/86WH8tZ3bmNNNC+bTzamqlw==
 
 is-extglob@^2.1.1:
   version "2.1.1"
@@ -5660,7 +5672,7 @@ tinyexec@^0.3.2:
   resolved "https://registry.npmjs.org/tinyexec/-/tinyexec-0.3.2.tgz"
   integrity sha512-KQQR9yN7R5+OSwaK0XQoj22pwHoTlgYqmUscPYoknOoWCWfj/5/ABTMRi69FrKU5ffPVh5QcFikpWJI/P1ocHA==
 
-tippy.js@^6.3.7:
+tippy.js@^6.3.1, tippy.js@^6.3.7:
   version "6.3.7"
   resolved "https://registry.yarnpkg.com/tippy.js/-/tippy.js-6.3.7.tgz#8ccfb651d642010ed9a32ff29b0e9e19c5b8c61c"
   integrity sha512-E1d3oP2emgJ9dRQZdf3Kkn0qJgI6ZLpyS5z6ZkY1DF3kaQaBsGZsndEpHwx+eC+tYM41HaSNvNtLx8tU57FzTQ==
@@ -5671,6 +5683,13 @@ tiptap-extension-global-drag-handle@^0.1.18:
   version "0.1.18"
   resolved "https://registry.yarnpkg.com/tiptap-extension-global-drag-handle/-/tiptap-extension-global-drag-handle-0.1.18.tgz#e821c7639b30bc26a9b83c49dce26b968272a7cf"
   integrity sha512-jwFuy1K8DP3a4bFy76Hpc63w1Sil0B7uZ3mvhQomVvUFCU787Lg2FowNhn7NFzeyok761qY2VG+PZ/FDthWUdg==
+
+tiptap-footnotes@^2.0.3:
+  version "2.0.3"
+  resolved "https://registry.yarnpkg.com/tiptap-footnotes/-/tiptap-footnotes-2.0.3.tgz#4c7b7724276bd7cc3e660fede675a5c024318501"
+  integrity sha512-LQvcjKMxmLlEAPYC2W8hObQHL4xiSqHLaBgniW1gSfzmZg3Xn8sHhcM0jiyIXMwQVV7EufD29Mr3zRQgQDck1w==
+  dependencies:
+    uuid "^9.0.1"
 
 tiptap-markdown@^0.8.10:
   version "0.8.10"
@@ -5889,6 +5908,11 @@ uuid@^10.0.0:
   version "10.0.0"
   resolved "https://registry.yarnpkg.com/uuid/-/uuid-10.0.0.tgz#5a95aa454e6e002725c79055fd42aaba30ca6294"
   integrity sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==
+
+uuid@^9.0.1:
+  version "9.0.1"
+  resolved "https://registry.yarnpkg.com/uuid/-/uuid-9.0.1.tgz#e188d4c8853cc722220392c424cd637f32293f30"
+  integrity sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==
 
 vfile-location@^5.0.0:
   version "5.0.3"

@@ -1,0 +1,49 @@
+{
+  "name": "@tiptap-pro/extension-emoji",
+  "description": "emoji extension for tiptap",
+  "version": "2.3.0",
+  "homepage": "https://tiptap.dev/api/nodes/emoji",
+  "keywords": [
+    "tiptap",
+    "tiptap extension"
+  ],
+  "license": "SEE LICENSE IN LICENSE.md",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/ueberdosis"
+  },
+  "main": "dist/tiptap-extension-emoji.cjs.js",
+  "umd": "dist/tiptap-extension-emoji.umd.js",
+  "module": "dist/tiptap-extension-emoji.esm.js",
+  "types": "dist/tiptap-pro/packages/extension-emoji/src/index.d.ts",
+  "files": [
+    "dist",
+    "CHANGELOG.md",
+    "LICENSE.md"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "npm run clean && rollup -c"
+  },
+  "peerDependencies": {
+    "@tiptap/core": "^2.0.0",
+    "@tiptap/pm": "^2.0.0",
+    "@tiptap/suggestion": "^2.0.0"
+  },
+  "dependencies": {
+    "emoji-regex": "^10.0.0",
+    "emojibase-data": "^7.0.1",
+    "is-emoji-supported": "^0.0.5"
+  },
+  "devDependencies": {
+    "@tiptap/core": "^2.0.0",
+    "@tiptap/pm": "^2.0.0",
+    "@tiptap/suggestion": "^2.0.0",
+    "emoji-datasource": "^7.0.2",
+    "json5": "^2.2.0",
+    "tsm": "^2.2.1"
+  },
+  "publishConfig": {
+    "registry": "https://registry.tiptap.dev"
+  }
+}

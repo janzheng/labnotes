@@ -1,3 +1,10 @@
+
+/* 
+
+  temporary; for use with Novel
+
+*/
+
 import type { APIRoute } from "astro";
 import { createGroq } from "@ai-sdk/groq";
 import { Ratelimit } from "@upstash/ratelimit";

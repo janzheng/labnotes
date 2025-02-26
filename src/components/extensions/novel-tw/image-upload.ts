@@ -6,7 +6,7 @@ const onUpload = (file: File) => {
     method: "POST",
     headers: {
       "content-type": file?.type || "application/octet-stream",
-      "x-vercel-filename": file?.name || "image.png",
+      "x-filename": file?.name || "image.png",
     },
     body: file,
   });

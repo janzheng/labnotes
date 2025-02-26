@@ -1,3 +1,6 @@
+
+// astro actions only handle objects, so SSE won't work
+
 import { executeStreamingPipeline } from '@/lib/pipeline';
 
 export async function POST({ request }) {

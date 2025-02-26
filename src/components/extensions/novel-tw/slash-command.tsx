@@ -7,6 +7,7 @@ import {
   ImageIcon,
   List,
   ListOrdered,
+  Sparkles,
   MessageSquarePlus,
   Text,
   TextQuote,
@@ -17,6 +18,33 @@ import { Command, createSuggestionItems, renderItems } from "@/components/extens
 import { uploadFn } from "./image-upload";
 
 export const suggestionItems = createSuggestionItems([
+  {
+    title: "Ask AI",
+    description: "Use AI to help with your writing.",
+    searchTerms: ["ai", "assistant", "gpt", "help", "generate"],
+    icon: <Sparkles size={18} />,
+    command: ({ editor, range }) => {
+      editor.chain().focus().deleteRange(range).run();
+      
+      // Force editor to select something so the bubble appears
+      // This is a workaround to trigger the bubble UI
+      const currentPos = editor.state.selection.from;
+      
+      // Select a minimal range to trigger the bubble
+      editor.commands.setTextSelection({
+        from: currentPos,
+        to: currentPos + 1
+      });
+      
+      // Trigger the AI selector
+      setTimeout(() => {
+        const event = new CustomEvent('novel:open-ai-selector', { 
+          detail: { open: true, timestamp: Date.now() } 
+        });
+        window.dispatchEvent(event);
+      }, 10);
+    },
+  },
   {
     title: "Send Feedback",
     description: "Let us know how we can improve.",

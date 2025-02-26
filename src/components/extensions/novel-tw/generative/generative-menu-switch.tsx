@@ -14,7 +14,21 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
 
   useEffect(() => {
     if (!open) removeAIHighlight(editor);
-  }, [open]);
+    
+    // Listen for the custom event to open the AI selector directly
+    const handleOpenAISelector = (event: CustomEvent) => {
+      if (event.detail?.open) {
+        onOpenChange(true);
+      }
+    };
+    
+    window.addEventListener('novel:open-ai-selector', handleOpenAISelector as EventListener);
+    
+    return () => {
+      window.removeEventListener('novel:open-ai-selector', handleOpenAISelector as EventListener);
+    };
+  }, [open, editor, onOpenChange]);
+
   return (
     <EditorBubble
       tippyOptions={{

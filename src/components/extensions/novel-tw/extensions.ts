@@ -1,10 +1,11 @@
 import {
   AIHighlight,
+  // ContentItemMenu,
   CharacterCount,
   CodeBlockLowlight,
   Color,
   CustomKeymap,
-  GlobalDragHandle,
+  // GlobalDragHandle,
   HighlightExtension,
   HorizontalRule,
   MarkdownExtension,
@@ -25,9 +26,12 @@ import {
 
 import { cx } from "class-variance-authority";
 import { common, createLowlight } from "lowlight";
+import { TaskBackspace } from "./extensions/task-backspace";
+import EnhancedDragHandle from "./extensions/enhanced-drag-handle";
 
 //TODO I am using cx here to get tailwind autocomplete working, idk if someone else can write a regex to just capture the class key in objects
 const aiHighlight = AIHighlight;
+// const contentItemMenu = ContentItemMenu;
 //You can overwrite the placeholder with your own configuration
 const placeholder = Placeholder;
 const tiptapLink = TiptapLink.configure({
@@ -169,6 +173,7 @@ export const defaultExtensions = [
   taskItem,
   horizontalRule,
   aiHighlight,
+  // contentItemMenu,
   codeBlockLowlight,
   youtube,
   twitter,
@@ -180,5 +185,7 @@ export const defaultExtensions = [
   TextStyle,
   Color,
   CustomKeymap,
-  GlobalDragHandle,
+  // GlobalDragHandle,
+  EnhancedDragHandle,
+  TaskBackspace,
 ];

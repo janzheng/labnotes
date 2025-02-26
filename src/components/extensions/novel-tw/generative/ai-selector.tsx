@@ -66,23 +66,27 @@ export function AISelector({ onOpenChange }: AISelectorProps) {
 
   const handleComplete = async () => {
     try {
+      // Get selected text if any
       const slice = editor.state.selection.content();
-      const text = editor.storage.markdown.serializer.serialize(slice.content);
+      const selectedText = editor.storage.markdown.serializer.serialize(slice.content);
       
-      if (!text.trim()) {
-        toast.error("Please select some text first");
+      // Use selected text if available, otherwise use input value as direct prompt
+      const textToSend = selectedText.trim() || inputValue.trim();
+      
+      if (!textToSend) {
+        toast.error("Please enter a message or select text");
         return;
       }
       
       console.log("Sending to AI:", {
-        prompt: text,
+        prompt: textToSend,
         option: "zap",
         command: inputValue
       });
       
-      await complete(text, {
+      await complete(textToSend, {
         body: { 
-          prompt: text,
+          prompt: textToSend,
           option: "zap", 
           command: inputValue 
         },
@@ -91,6 +95,14 @@ export function AISelector({ onOpenChange }: AISelectorProps) {
     } catch (error) {
       console.error("Error in handleComplete:", error);
       toast.error("Failed to send request to AI");
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Process Enter key press when input has content
+    if (e.key === 'Enter' && inputValue.trim()) {
+      e.preventDefault();
+      handleComplete();
     }
   };
 
@@ -126,6 +138,7 @@ export function AISelector({ onOpenChange }: AISelectorProps) {
                 autoFocus
                 placeholder={hasCompletion ? "Tell AI what to do next" : "Ask AI to edit or generate..."}
                 onFocus={() => addAIHighlight(editor)}
+                onKeyDown={handleKeyDown}
               />
               <Button
                 size="icon"
@@ -149,7 +162,7 @@ export function AISelector({ onOpenChange }: AISelectorProps) {
           </>
         )}
       
-        <CommandEmpty>No results found.</CommandEmpty>
+        <CommandEmpty>Press Enter to send message</CommandEmpty>
       </CommandList>
     </Command>
   );

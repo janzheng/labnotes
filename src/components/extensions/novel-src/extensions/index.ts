@@ -23,7 +23,7 @@ import Youtube from "@tiptap/extension-youtube";
 import GlobalDragHandle from "tiptap-extension-global-drag-handle";
 
 const PlaceholderExtension = Placeholder.configure({
-  placeholder: ({ node }) => {
+  placeholder: ({ node, pos, editor }) => {
     if (node.type.name === "heading") {
       return `Heading ${node.attrs.level}`;
     }
@@ -61,6 +61,7 @@ const Horizontal = HorizontalRule.extend({
 });
 
 export * from "./ai-highlight";
+// export * from "./content-item-menu";
 export * from "./slash-command";
 export {
   CodeBlockLowlight,

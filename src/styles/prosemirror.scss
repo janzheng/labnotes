@@ -1,6 +1,6 @@
 @media (min-width: 640px) {
   .ProseMirror {
-    @apply px-8 py-4;
+    @apply px-16 py-4;
   }
 }
 
@@ -17,6 +17,34 @@
   color: hsl(var(--muted-foreground));
   pointer-events: none;
   height: 0;
+}
+.ProseMirror p.is-empty {
+  color: var(--color-muted-forground-light);
+}
+.ProseMirror li.is-empty, .ProseMirror ol.footnotes.is-empty {
+  &:before {
+    display: none;
+  }
+}
+
+
+.ProseMirror ul.is-empty:not(.list-disc) {
+  &:before {
+    content: attr(data-placeholder);
+    color: var(--color-muted-forground-light);
+    margin-left: 2.2rem;
+    display: block;
+  }
+}
+.ProseMirror ul.is-empty.list-disc, .ProseMirror ol.is-empty.list-decimal {
+  &:before {
+    content: attr(data-placeholder);
+    color: var(--color-muted-forground-light);
+    position: relative;
+    bottom: -6px;
+    left: 6px;
+    display: block;
+  }
 }
 
 /* Custom image styles */
@@ -61,9 +89,29 @@
 
 /* Custom TODO list checkboxes – shoutout to this awesome tutorial: https://moderncss.dev/pure-css-custom-checkbox-style/ */
 
-ul[data-type="taskList"] li > label {
-  margin-right: 0.2rem;
-  user-select: none;
+
+ul[data-type="taskList"] {
+  li {
+    position: relative;
+    display: flex;
+
+    &.is-empty {
+      margin-left: 0em; /* reset when lists get shifted */
+    }
+    
+    > label {
+      margin-right: 0.2rem;
+      user-select: none;
+      flex-shrink: 0; /* Prevent the label from shrinking */
+      position: relative; /* Ensure consistent positioning */
+      width: 1.5em; /* Fixed width for the checkbox area */
+
+    }
+    
+    > div {
+      flex-grow: 1; /* Allow the content to take remaining space */
+    }
+  }
 }
 
 @media screen and (max-width: 768px) {
@@ -81,7 +129,7 @@ ul[data-type="taskList"] li > label input[type="checkbox"] {
   width: 1.2em;
   height: 1.2em;
   position: relative;
-  top: 5px;
+  top: 4px;
   border: 2px solid #e2e8f0;
   margin-right: 0.3rem;
   border-radius: 2px;
@@ -159,6 +207,8 @@ ul[data-type="taskList"] li[data-checked="true"] > div > p {
   height: 1.5rem;
   z-index: 50;
   cursor: grab;
+  display: flex;
+  align-items: center;
 
   &:hover {
     background-color: var(--novel-stone-100);
@@ -227,3 +277,31 @@ span[style] > strong {
 mark[style] > strong {
   color: inherit;
 }
+
+.ProseMirror { 
+  ol.footnotes {
+    margin-top: 20px;
+    padding: 20px 0;
+    list-style-type: decimal;
+    padding-left: 20px;
+  }
+
+  ol.footnotes:has(li) {
+    border-top: 1px solid black;
+  }
+}
+
+
+
+/* 
+
+  tw/typography changes / overrides
+
+*/
+
+.prose :where(p):not(:where([class~=not-prose], [class~=not-prose] *)) {
+  /* default is too tall for paragraphs */
+  margin-bottom: 0.7rem;
+  margin-top: 0.7rem;
+}
+

@@ -1,4 +1,4 @@
-import { executePipeline, executeStreamingPipeline } from '@/lib/pipeline';
+import { executePipeline } from '@/lib/pipeline';
 import { defineAction } from 'astro:actions';
 import { z } from 'astro:schema';
 import { nanoid } from 'nanoid';

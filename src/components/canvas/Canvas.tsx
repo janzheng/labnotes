@@ -36,7 +36,7 @@ const ComponentSelector: React.FC<{ onAssignType: (type: keyof typeof COMPONENT_
         <button
           key={type}
           onClick={() => onAssignType(type)}
-          className="p-4 border rounded-lg hover:bg-gray-50 transition-colors"
+          className="p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
         >
           <h3 className="font-semibold mb-2">{type}</h3>
           <p className="text-sm text-gray-600">Click to add this component</p>

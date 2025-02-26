@@ -1,0 +1,37 @@
+{
+  "name": "@tiptap-pro/extension-details-summary",
+  "description": "details-summary extension for tiptap",
+  "version": "2.3.0",
+  "homepage": "https://tiptap.dev/api/nodes/details-summary",
+  "keywords": [
+    "tiptap",
+    "tiptap extension"
+  ],
+  "license": "SEE LICENSE IN LICENSE.md",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/ueberdosis"
+  },
+  "main": "dist/tiptap-extension-details-summary.cjs.js",
+  "umd": "dist/tiptap-extension-details-summary.umd.js",
+  "module": "dist/tiptap-extension-details-summary.esm.js",
+  "types": "dist/tiptap-pro/packages/extension-details-summary/src/index.d.ts",
+  "files": [
+    "dist",
+    "CHANGELOG.md",
+    "LICENSE.md"
+  ],
+  "peerDependencies": {
+    "@tiptap/core": "^2.0.0"
+  },
+  "devDependencies": {
+    "@tiptap/core": "^2.0.0"
+  },
+  "publishConfig": {
+    "registry": "https://registry.tiptap.dev"
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "npm run clean && rollup -c"
+  }
+}
