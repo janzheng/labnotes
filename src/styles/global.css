@@ -7,6 +7,11 @@
 @import "katex/dist/katex.min.css";
 @import "./prosemirror.scss";
 
+/* source: https://github.com/shadcn-ui/ui/discussions/6714 */
+@source "../app/**/*.{ts,tsx}";
+@source "../components/**/*.{ts,tsx}";
+@source "../../../packages/ui/components/**/*.{ts,tsx}";
+
 @custom-variant dark (&:is(.dark *));
 
 

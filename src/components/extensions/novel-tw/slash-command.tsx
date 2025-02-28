@@ -24,23 +24,23 @@ export const suggestionItems = createSuggestionItems([
     searchTerms: ["ai", "assistant", "gpt", "help", "generate"],
     icon: <Sparkles size={18} />,
     command: ({ editor, range }) => {
+      const currentPos = range.to;
+      
       editor.chain().focus().deleteRange(range).run();
       
-      // Force editor to select something so the bubble appears
-      // This is a workaround to trigger the bubble UI
-      const currentPos = editor.state.selection.from;
+      const now = Date.now();
+      window.localStorage.setItem('novel:ai-selector-open', now.toString());
       
-      // Select a minimal range to trigger the bubble
-      editor.commands.setTextSelection({
-        from: currentPos,
-        to: currentPos + 1
-      });
-      
-      // Trigger the AI selector
       setTimeout(() => {
-        console.log("Triggering AI selector");
+        console.log("Triggering AI selector via slash command at position:", currentPos);
         const event = new CustomEvent('novel:open-ai-selector', { 
-          detail: { open: true, timestamp: Date.now() } 
+          detail: { 
+            open: true, 
+            timestamp: now,
+            source: 'slash-command',
+            position: currentPos,
+            hasSelection: false
+          } 
         });
         window.dispatchEvent(event);
       }, 10);

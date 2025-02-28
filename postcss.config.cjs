@@ -6,7 +6,7 @@ module.exports = {
     require('postcss-import'),
     require('postcss-nesting'),
     // require('tailwindcss/nesting'),
-    // require('tailwindcss'),
+    require('@tailwindcss/postcss'),
     require('autoprefixer'),
     require('cssnano')({
       preset: [

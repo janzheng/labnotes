@@ -1,11 +1,25 @@
 // @ts-check
+import path from "path"
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import tailwindcss from "@tailwindcss/vite";
 import deno from "@deno/astro-adapter";
+import { fileURLToPath } from 'url';
+
+// Get the directory path using ESM compatible approach
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // https://astro.build/config
 export default defineConfig({
+  vite: {
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+      },
+    },
+  },
+
   output: "server",
   prefetch: true,
   server: {

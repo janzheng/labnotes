@@ -27,6 +27,9 @@ export const AIShortcut = Extension.create({
         // Mark that we're opening an AI selector
         window.localStorage.setItem('novel:ai-selector-open', now.toString());
         
+        // Also set this flag to prevent the bubble menu from showing
+        window.localStorage.setItem('novel:suppress-bubble-menu', 'true');
+        
         // Trigger the AI selector - works regardless of selection state
         setTimeout(() => {
           const event = new CustomEvent('novel:open-ai-selector', {
@@ -35,7 +38,8 @@ export const AIShortcut = Extension.create({
               timestamp: now,
               source: 'keyboard',
               position: from,
-              hasSelection: selection.from !== selection.to
+              hasSelection: selection.from !== selection.to,
+              suppressBubbleMenu: true // Add this flag to indicate we don't want the bubble menu
             }
           });
           window.dispatchEvent(event);

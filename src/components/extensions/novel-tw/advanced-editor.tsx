@@ -9,7 +9,6 @@ import {
   type EditorInstance,
   EditorRoot,
   ImageResizer,
-  type JSONContent,
   handleCommandNavigation,
   handleImageDrop,
   handleImagePaste,
@@ -40,6 +39,8 @@ import { DragStateManager } from "@/components/extensions/novel-src/extensions/d
 import ClearFormatBackspace from "./extensions/clear-format-backspace";
 import { AIShortcut, SpaceAITrigger } from "./extensions/ai-shortcut";
 
+// Import our new AI Trigger Manager
+import AITriggerManager from "./extensions/ai-trigger-manager";
 
 // Debug logger
 function logDebug(...args) {
@@ -168,6 +169,21 @@ const TailwindAdvancedEditor: React.FC<TailwindAdvancedEditorProps> = ({
 
   const [editor, setEditor] = useState<EditorInstance | null>(null);
   const isUpdatingExternally = useRef(false);
+  // Add a ref for the container element
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Function to handle clicks on the container
+  const handleContainerClick = useCallback((e: React.MouseEvent) => {
+    // Only focus if we have an editor and the click wasn't directly on an editor element
+    if (editor && containerRef.current) {
+      // Check if the click target is not inside the editor content
+      const editorElement = containerRef.current.querySelector('.ProseMirror');
+      if (editorElement && !editorElement.contains(e.target as Node)) {
+        // Focus the editor
+        editor.commands.focus('end');
+      }
+    }
+  }, [editor]);
 
   // Function to update word count from editor state
   const updateWordCount = useCallback((editorInstance: EditorInstance) => {
@@ -250,54 +266,8 @@ const TailwindAdvancedEditor: React.FC<TailwindAdvancedEditorProps> = ({
     };
   }, [editor, updateWordCount]);
   
-  // Event listener setup for AI selector and drag handle
+  // Keep only drag handle related events here
   useEffect(() => {
-    // Listen for the custom event to open the AI selector
-    const handleOpenAISelector = (event: CustomEvent) => {
-      if (event.detail?.open) {
-        // Check if we need to select text first
-        if (event.detail?.selectText && editor) {
-          try {
-            // If we have a position from the event, use it
-            const startPos = event.detail.position !== undefined 
-              ? event.detail.position 
-              : editor.state.selection.from;
-            
-            // Ensure we're at a valid position in the document
-            if (startPos < editor.state.doc.content.size) {
-              // First make sure the cursor is at the right position
-              editor.commands.setNodeSelection(startPos);
-              
-              // Force the bubble to show by creating a minimal selection
-              setTimeout(() => {
-                // Find the nearest text node and select one character
-                const resolvedPos = editor.state.doc.resolve(startPos);
-                const node = resolvedPos.node();
-                
-                // Force selection of the node to trigger bubble
-                editor.chain()
-                  .focus()
-                  .selectNodeForward()
-                  .run();
-                
-                // Force the force editorview to update
-                editor.commands.focus();
-                
-                setOpenAI(true);
-              }, 10);
-            } else {
-              setOpenAI(true);
-            }
-          } catch (e) {
-            console.error('Error during text selection:', e);
-            setOpenAI(true);
-          }
-        } else {
-          setOpenAI(true);
-        }
-      }
-    };
-    
     // Listen for the add block event
     const handleAddBlock = (event: CustomEvent) => {
       if (event.detail?.position !== undefined) {
@@ -350,16 +320,14 @@ const TailwindAdvancedEditor: React.FC<TailwindAdvancedEditorProps> = ({
       }
     };
     
-    window.addEventListener('novel:open-ai-selector', handleOpenAISelector as EventListener);
     window.addEventListener('novel:add-block', handleAddBlock as EventListener);
     window.addEventListener('novel:drag-handle-command', handleDragHandleCommand as EventListener);
     
     return () => {
-      window.removeEventListener('novel:open-ai-selector', handleOpenAISelector as EventListener);
       window.removeEventListener('novel:add-block', handleAddBlock as EventListener);
       window.removeEventListener('novel:drag-handle-command', handleDragHandleCommand as EventListener);
     };
-  }, [editor, openAI]);
+  }, [editor]);
 
   const debouncedUpdates = useDebouncedCallback(async (editor: EditorInstance) => {
     // Skip updates that are triggered by external content changes
@@ -419,7 +387,11 @@ const TailwindAdvancedEditor: React.FC<TailwindAdvancedEditorProps> = ({
   }, [completion, action, editor]);
   
   return (
-    <div className="relative">
+    <div 
+      className="relative" 
+      ref={containerRef} 
+      onClick={handleContainerClick}
+    >
       <EditorRoot>
         <EditorContent
           initialContent={initialContent}
@@ -488,6 +460,14 @@ const TailwindAdvancedEditor: React.FC<TailwindAdvancedEditorProps> = ({
             <Separator orientation="vertical" />
             <ColorSelector open={openColor} onOpenChange={setOpenColor} />
           </GenerativeMenuSwitch>
+          
+          {/* Add our AI Trigger Manager here */}
+          <AITriggerManager onAIStateChange={(isOpen) => {
+            // Optionally sync with the openAI state if needed
+            if (isOpen !== openAI) {
+              setOpenAI(isOpen);
+            }
+          }} />
         </EditorContent>
       </EditorRoot>
     </div>

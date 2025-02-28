@@ -100,10 +100,10 @@ export const threadgirlAction = defineAction({
     sources: z.array(z.object({
       url: z.string(),
       text: z.string()
-    })),
-    prompts: z.array(z.string()),
-    query: z.string(),
-    url: z.string(),
+    })).optional().default([]),
+    prompts: z.array(z.string()).optional().default([]),
+    query: z.string().optional().default(""),
+    url: z.string().optional().default(""),
     useCache: z.boolean().default(true),
     saveCache: z.boolean().default(true),
   }),
@@ -120,6 +120,7 @@ export const threadgirlAction = defineAction({
         }
       ]
     } else if (command === "runThreadgirl") {
+      console.log('>>>>>> [threadgirlAction] query', query);
       pipeline = [
         {
           "name": "threadgirlquery",
@@ -136,6 +137,7 @@ export const threadgirlAction = defineAction({
       saveCache: saveCache,
     });
     
+    // console.log('[threadgirlAction] result', result);
 
     return {
       prompts: command === "getThreadgirlPrompts" ? result : null,

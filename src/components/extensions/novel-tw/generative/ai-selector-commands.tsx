@@ -1,4 +1,4 @@
-import { ArrowDownWideNarrow, Check, RefreshCcwDot, StepForward, WrapText, Image, Wand2, Sparkles, Pencil, ImageIcon, Plug, List, ArrowLeft } from "lucide-react";
+import { ArrowDownWideNarrow, Check, RefreshCcwDot, StepForward, WrapText, Image, Wand2, Sparkles, Pencil, ImageIcon, Plug, List, ArrowLeft, ChevronRight } from "lucide-react";
 import { getPrevText, useEditor } from "@/components/extensions/novel-src";
 import { CommandGroup, CommandItem, CommandSeparator } from "@/components/ui/command";
 import { nanoid } from "nanoid";
@@ -60,7 +60,7 @@ const AISelectorCommands = ({
 
   if (showThreadgirlMenu) {
     return (
-      <div className="p-2">
+      <div className="">
         <CommandGroup>
           <CommandItem
             onSelect={() => onBackFromThreadgirl?.()}
@@ -100,7 +100,7 @@ const AISelectorCommands = ({
   }
 
   return (
-    <div className="p-2">
+    <div className="">
       {/* Generated image actions */}
       {generatedImageUrl && (
         <CommandGroup heading="Image Actions">
@@ -126,19 +126,20 @@ const AISelectorCommands = ({
         {!generatedImageUrl && (
           <>
             <CommandItem
-              onSelect={() => onSelect("Generate an image", "generate-image")}
-              className="flex items-center"
-            >
-              <ImageIcon className="mr-2 h-4 w-4" />
-              <span>Generate an image</span>
-            </CommandItem>
-            
-            <CommandItem
               onSelect={() => onSelect("Get prompts", "get-threadgirl-prompts")}
               className="flex items-center"
             >
               <List className="mr-2 h-4 w-4" />
               <span>Threadgirl</span>
+              <div className="flex-1"></div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </CommandItem>
+            <CommandItem
+              onSelect={() => onSelect("Generate an image", "generate-image")}
+              className="flex items-center"
+            >
+              <ImageIcon className="mr-2 h-4 w-4" />
+              <span>Generate an image</span>
             </CommandItem>
           </>
         )}

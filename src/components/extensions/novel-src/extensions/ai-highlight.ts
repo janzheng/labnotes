@@ -31,14 +31,16 @@ export const AIHighlight = Mark.create<AIHighlightOptions>({
 
   addOptions() {
     return {
-      HTMLAttributes: {},
+      HTMLAttributes: {
+        class: 'ai-highlight',
+      },
     };
   },
 
   addAttributes() {
     return {
       color: {
-        default: null,
+        default: "#c1ecf970", // Make this a more noticeable default
         parseHTML: (element) => element.getAttribute("data-color") || element.style.backgroundColor,
         renderHTML: (attributes) => {
           if (!attributes.color) {
@@ -47,7 +49,8 @@ export const AIHighlight = Mark.create<AIHighlightOptions>({
 
           return {
             "data-color": attributes.color,
-            style: `background-color: ${attributes.color}; color: inherit`,
+            "class": "ai-highlight",
+            style: `background-color: ${attributes.color}; color: inherit; padding-top: 5px; padding-bottom: 5px; border-radius: 2px;`,
           };
         },
       },
@@ -58,6 +61,14 @@ export const AIHighlight = Mark.create<AIHighlightOptions>({
     return [
       {
         tag: "mark",
+        getAttrs: (node) => {
+          if (typeof node === 'string') return null;
+          const element = node as HTMLElement;
+          return element.classList.contains('ai-highlight') ? {} : false;
+        },
+      },
+      {
+        tag: "span.ai-highlight",
       },
     ];
   },
@@ -112,13 +123,40 @@ export const AIHighlight = Mark.create<AIHighlightOptions>({
 });
 
 export const removeAIHighlight = (editor: Editor) => {
-  const tr = editor.state.tr;
-  tr.removeMark(0, editor.state.doc.nodeSize - 2, editor.state.schema.marks["ai-highlight"]);
-  editor.view.dispatch(tr);
+  if (!editor) return;
+
+  try {
+    const tr = editor.state.tr;
+    tr.removeMark(0, editor.state.doc.nodeSize - 2, editor.state.schema.marks["ai-highlight"]);
+    editor.view.dispatch(tr);
+  } catch (error) {
+    console.error('[REMOVE-AI-HIGHLIGHT] Error removing highlight:', error);
+  }
 };
+
 export const addAIHighlight = (editor: Editor, color?: string) => {
-  editor
-    .chain()
-    .setAIHighlight({ color: color ?? "#c1ecf970" })
-    .run();
+  if (!editor) return;
+  
+  const highlightColor = color ?? "#B5D8FE";
+  
+  // Get the current selection
+  const { from, to } = editor.state.selection;
+  
+  
+  try {
+    editor
+      .chain()
+      .focus()
+      .setAIHighlight({ color: highlightColor })
+      .run();
+    
+  } catch (error) {
+    console.error('[ADD-AI-HIGHLIGHT] Error applying highlight with chain command:', error);
+  }
+
+  // Check if the mark was applied successfully
+  setTimeout(() => {
+    const marks = editor.state.doc.nodeAt(from)?.marks;
+    const hasAIHighlight = marks?.some(mark => mark.type.name === 'ai-highlight');
+  }, 50);
 };
