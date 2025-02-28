@@ -13,6 +13,14 @@ const storage = createStorage({
   })
 });
 
+// Initialize UI state storage
+const uiStorage = createStorage({
+  driver: localStorageDriver({
+    base: 'ui-state',
+    localStorage: typeof window !== 'undefined' ? window.localStorage : undefined
+  })
+});
+
 // State atoms
 export const isLoading = atom(true);
 export const error = atom<string | null>(null);
@@ -20,6 +28,58 @@ export const isInitialized = atom(false);
 export const isSidebarOpen = atom(true);
 export const selectedProjectId = atom<string | null>(null);
 export const projectsStore = atom<ProjectsState>(initialState);
+
+// Section visibility states - with default values that will be overridden on init
+export const isProjectsSectionCollapsed = atom(false);
+export const isHistorySectionCollapsed = atom(false);
+
+// Folder expansion state
+export const expandedFolders = atom<Record<string, boolean>>({});
+
+// BasicTech feature toggle
+export const isBasicTechEnabled = atom(false); // Set default to false to disable by default
+
+// UI style preferences
+export const cursorPointerClass = 'cursor-pointer'; // CSS class for clickable elements
+
+// Delete confirmation modal state
+export const deleteModalState = atom<{
+  isOpen: boolean;
+  projectId: string | null;
+  projectName: string;
+  onConfirm: () => void;
+}>({
+  isOpen: false,
+  projectId: null,
+  projectName: '',
+  onConfirm: () => {}
+});
+
+// Project selection
+export const selectProject = (projectId: string) => {
+  if (!projectId) return;
+  
+  const state = projectsStore.get();
+  
+  // Only select if project exists
+  if (state.items[projectId]) {
+    // First clear the current selection to trigger proper re-renders
+    selectedProjectId.set(null);
+    
+    // Use setTimeout to ensure the null value is processed first
+    setTimeout(() => {
+      selectedProjectId.set(projectId);
+      
+      // Update URL if needed
+      if (typeof window !== 'undefined') {
+        const url = `/project/${projectId}`;
+        if (window.location.pathname !== url) {
+          window.history.pushState({}, '', url);
+        }
+      }
+    }, 0);
+  }
+};
 
 // URL selection logic
 export const selectProjectFromUrl = () => {
@@ -30,13 +90,79 @@ export const selectProjectFromUrl = () => {
   
   if (matches && matches[1]) {
     const projectId = matches[1];
-    const state = projectsStore.get();
-    
-    // Only select if project exists
-    if (state.items[projectId]) {
-      selectedProjectId.set(projectId);
-    }
+    selectProject(projectId);
   }
+};
+
+// Initialize UI state
+async function initializeUIState() {
+  if (typeof window === 'undefined') return;
+
+  try {
+    // Load section collapse states
+    const projectsSectionState = await uiStorage.getItem('projectsSectionCollapsed');
+    if (projectsSectionState !== null) {
+      isProjectsSectionCollapsed.set(projectsSectionState as boolean);
+    }
+    
+    const historySectionState = await uiStorage.getItem('historySectionCollapsed');
+    if (historySectionState !== null) {
+      isHistorySectionCollapsed.set(historySectionState as boolean);
+    }
+    
+    // Load folder expansion states
+    const folderStates = await uiStorage.getItem('expandedFolders');
+    if (folderStates) {
+      expandedFolders.set(folderStates as Record<string, boolean>);
+    }
+  } catch (err) {
+    console.error('Failed to load UI state:', err);
+  }
+}
+
+// Save section collapse states when they change
+isProjectsSectionCollapsed.listen(async (collapsed) => {
+  if (typeof window === 'undefined') return;
+  try {
+    await uiStorage.setItem('projectsSectionCollapsed', collapsed);
+  } catch (err) {
+    console.error('Failed to save projects section state:', err);
+  }
+});
+
+isHistorySectionCollapsed.listen(async (collapsed) => {
+  if (typeof window === 'undefined') return;
+  try {
+    await uiStorage.setItem('historySectionCollapsed', collapsed);
+  } catch (err) {
+    console.error('Failed to save history section state:', err);
+  }
+});
+
+// Save folder expansion states when they change
+expandedFolders.listen(async (states) => {
+  if (typeof window === 'undefined') return;
+  try {
+    await uiStorage.setItem('expandedFolders', states);
+  } catch (err) {
+    console.error('Failed to save folder states:', err);
+  }
+});
+
+// Helper function to toggle folder expansion
+export const toggleFolderExpanded = (folderId: string) => {
+  const currentStates = expandedFolders.get();
+  const isCurrentlyExpanded = currentStates[folderId] ?? false; // Default to false if not set
+  
+  expandedFolders.set({
+    ...currentStates,
+    [folderId]: !isCurrentlyExpanded
+  });
+};
+
+// Check if a folder is expanded
+export const isFolderExpanded = (folderId: string) => {
+  return expandedFolders.get()[folderId] ?? false; // Default to false if not set
 };
 
 // Store initialization
@@ -57,6 +183,9 @@ async function initializeStore() {
     isInitialized.set(true);
     // Add URL-based selection after state is loaded
     selectProjectFromUrl();
+    
+    // Initialize UI state after project state is loaded
+    await initializeUIState();
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Failed to load stored state';
     error.set(errorMessage);
@@ -79,7 +208,7 @@ projectsStore.listen(async (state) => {
 });
 
 // Project operations
-export const addProject = async (name: string, parentId: string | null = null) => {
+export const addProject = async (name: string, parentId: string | null = null, insertIndex?: number) => {
   try {
     isLoading.set(true);
     error.set(null);
@@ -88,19 +217,38 @@ export const addProject = async (name: string, parentId: string | null = null) =
       id,
       name,
       parentId,
-      type: 'project'
+      type: 'project',
+      lastModified: Date.now()
     };
     
     const currentState = projectsStore.get();
     const newState = {
       items: { ...currentState.items, [id]: project },
-      rootIds: parentId === null ? [...currentState.rootIds, id] : currentState.rootIds
+      rootIds: [...currentState.rootIds]
     };
 
-    if (parentId && currentState.items[parentId]?.type === 'folder') {
+    // Handle insertion at specific index
+    if (parentId === null) {
+      // Add to root at specific index
+      if (insertIndex !== undefined) {
+        newState.rootIds.splice(insertIndex, 0, id);
+      } else {
+        newState.rootIds.push(id);
+      }
+    } else if (currentState.items[parentId]?.type === 'folder') {
+      // Add to folder at specific index
+      const parentFolder = currentState.items[parentId];
+      const children = [...(parentFolder.children || [])];
+      
+      if (insertIndex !== undefined) {
+        children.splice(insertIndex, 0, id);
+      } else {
+        children.push(id);
+      }
+      
       newState.items[parentId] = {
-        ...currentState.items[parentId],
-        children: [...(currentState.items[parentId].children || []), id]
+        ...parentFolder,
+        children
       };
     }
 
@@ -252,6 +400,94 @@ export const deleteProject = (projectId: string) => {
   });
 };
 
+// Show delete confirmation modal
+export const showDeleteConfirmation = (projectId: string) => {
+  const currentState = projectsStore.get();
+  const project = currentState.items[projectId];
+  
+  if (!project) return;
+  
+  deleteModalState.set({
+    isOpen: true,
+    projectId,
+    projectName: project.name,
+    onConfirm: () => {
+      // Actual delete operation
+      const currentState = projectsStore.get();
+      const project = currentState.items[projectId];
+      
+      if (!project) return;
+
+      // If it's a folder, recursively delete all children
+      if (project.type === 'folder' && project.children) {
+        project.children.forEach(childId => deleteProject(childId));
+      }
+
+      // Remove from parent
+      if (project.parentId) {
+        const parent = currentState.items[project.parentId];
+        if (parent && parent.children) {
+          currentState.items[project.parentId] = {
+            ...parent,
+            children: parent.children.filter(id => id !== projectId)
+          };
+        }
+      }
+
+      // Remove from rootIds if it's there
+      currentState.rootIds = currentState.rootIds.filter(id => id !== projectId);
+
+      // Remove the project itself
+      const { [projectId]: removed, ...remainingItems } = currentState.items;
+      
+      projectsStore.set({
+        items: remainingItems,
+        rootIds: currentState.rootIds
+      });
+      
+      // Close modal after deletion
+      closeDeleteModal();
+    }
+  });
+};
+
+// Close delete confirmation modal
+export const closeDeleteModal = () => {
+  deleteModalState.set({
+    isOpen: false,
+    projectId: null,
+    projectName: '',
+    onConfirm: () => {}
+  });
+};
+
+// Get projects sorted by last modified date (newest first)
+export const getProjectsByLastModified = () => {
+  const state = projectsStore.get();
+  return Object.values(state.items)
+    .filter(item => item.type === 'project')
+    .sort((a, b) => (b.lastModified || 0) - (a.lastModified || 0));
+};
+
+// Update project's lastModified timestamp
+export const updateLastModified = (projectId: string) => {
+  const currentState = projectsStore.get();
+  const project = currentState.items[projectId];
+  
+  if (!project) return;
+  
+  projectsStore.set({
+    ...currentState,
+    items: {
+      ...currentState.items,
+      [projectId]: {
+        ...project,
+        lastModified: Date.now()
+      }
+    }
+  });
+};
+
 // Component operations
 export const assignComponentToProject = (projectId: string, componentType: ComponentType, initialData: Record<string, any> = {}) => {
   const currentState = projectsStore.get();
@@ -266,7 +502,8 @@ export const assignComponentToProject = (projectId: string, componentType: Compo
 
   const updatedProject = {
     ...project,
-    components: [...(project.components || []), newComponent]
+    components: [...(project.components || []), newComponent],
+    lastModified: Date.now()
   };
 
   projectsStore.set({
@@ -299,6 +536,43 @@ export const removeComponentFromProject = (projectId: string, componentIndex: nu
       [projectId]: updatedProject
     }
   });
+};
+
+// Add a generic component update function
+export const updateComponentData = async <T>(projectId: string, componentIndex: number, updatedData: T) => {
+  const currentState = projectsStore.get();
+  const project = currentState.items[projectId];
+
+  if (!project || project.type !== 'project') {
+    console.error('Project not found or invalid type');
+    return;
+  }
+
+  if (!project.components || componentIndex >= project.components.length) {
+    console.error('Component index out of bounds');
+    return;
+  }
+
+  const updatedComponents = [...(project.components || [])];
+  updatedComponents[componentIndex] = {
+    ...updatedComponents[componentIndex],
+    data: updatedData
+  };
+
+  projectsStore.set({
+    ...currentState,
+    items: {
+      ...currentState.items,
+      [projectId]: {
+        ...project,
+        components: updatedComponents,
+        lastModified: Date.now()
+      }
+    }
+  });
+
+  // Return the updated project for any additional processing if needed
+  return currentState.items[projectId];
 };
 
 // Initialize store in browser

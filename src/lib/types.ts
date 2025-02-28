@@ -47,6 +47,7 @@ export type Project = {
   type: 'folder' | 'project';
   children?: string[]; // Only for folders - contains IDs of children
   components?: ComponentConfig[]; // Array of components assigned to this project
+  lastModified?: number; // Timestamp when the project was last modified
 };
 
 export type ProjectsState = {

@@ -4,28 +4,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ReactMarkdown from 'react-markdown';
 import { actions } from 'astro:actions';
-import type { ChatData } from '@/lib/stores';
-import projectsStore from '@/lib/stores';
+import type { ChatData } from '@/lib/types';
+import projectsStore, { isBasicTechEnabled, updateComponentData } from '@/lib/stores';
 import { nanoid } from 'nanoid';
 import { useBasic, useQuery } from '@basictech/react';
+import type { ComponentConfig } from '@/lib/stores';
 
-export const StreamChat: React.FC<BaseComponentProps> = ({ config }) => {
+export const StreamChat: React.FC<{ config: ComponentConfig }> = ({ config }) => {
   const [loading, setLoading] = useState(false);
   const [input, setInput] = useState('');
   const [currentStreamingMessage, setCurrentStreamingMessage] = useState('');
   const [userPrompt, setUserPrompt] = useState('');
+  const basicTechEnabled = isBasicTechEnabled.get();
+  console.log('[basic.db] enabled:', basicTechEnabled);
   const { db, isSignedIn } = useBasic();
   
-  // Get remote project data
+  // Get remote project data only if BasicTech is enabled
   let remoteProject = useQuery(() => 
-    db?.collection('projects')
+    basicTechEnabled && db?.collection('projects')
       .getAll()
       .then(projects => projects.find(p => p.localId === config.projectId))
   );
 
   // First sync local to remote on initial load
   useEffect(() => {
-    if (!db || !isSignedIn || remoteProject === undefined) return;
+    if (!basicTechEnabled || !db || !isSignedIn || remoteProject === undefined) return;
 
     const currentState = projectsStore.get();
     const project = currentState.items[config.projectId];
@@ -33,10 +36,12 @@ export const StreamChat: React.FC<BaseComponentProps> = ({ config }) => {
     if (!project || project.type !== 'project') return;
 
     // Only sync to remote if there's no remote project yet
+    const localData = project.components[config.componentIndex].data as ChatData;
+    
     if (!remoteProject) {
-      syncToRemote(project.components[config.componentIndex].data);
+      syncToRemote(localData);
     }
-  }, [remoteProject, db, isSignedIn]);
+  }, [remoteProject, db, isSignedIn, basicTechEnabled]);
 
   // Keep local in sync with remote changes
   useEffect(() => {
@@ -47,18 +52,24 @@ export const StreamChat: React.FC<BaseComponentProps> = ({ config }) => {
 
     if (!project || project.type !== 'project') return;
 
-    const remoteData = remoteProject.data?.components?.[config.componentIndex]?.data;
-    const localData = project.components[config.componentIndex].data;
+    const remoteData = remoteProject.data?.components?.[config.componentIndex]?.data as ChatData;
+    const localData = project.components[config.componentIndex].data as ChatData;
     
     if (JSON.stringify(remoteData) !== JSON.stringify(localData)) {
       console.log('Syncing local chat to match remote:', remoteData);
       // Update local store with remote data
-      updateProjectStore(remoteData, false);
+      setData(remoteData);
     }
   }, [remoteProject]);
 
+  // Helper function to set data directly in the component state
+  const setData = (newData: ChatData) => {
+    // Using the new generic function from the store
+    updateComponentData(config.projectId, config.componentIndex, newData);
+  };
+
   const syncToRemote = async (updatedData: ChatData) => {
-    if (!db || !isSignedIn) return;
+    if (!basicTechEnabled || !db || !isSignedIn) return;
 
     const currentState = projectsStore.get();
     const project = currentState.items[config.projectId];
@@ -89,58 +100,15 @@ export const StreamChat: React.FC<BaseComponentProps> = ({ config }) => {
         data: projectData,
         lastModified: Date.now()
       });
+      remoteProject = await db?.collection('projects')
+        .getAll()
+        .then(projects => projects.find(p => p.localId === config.projectId))
     }
   };
 
-  // Get the stored responses from config.data
-  const chatData = (config.data || {}) as ChatData;
+  // Get the stored chat data from config.data
+  const chatData = (config.data || { messages: [] }) as ChatData;
   const messages = chatData.messages || [];
-
-  const updateProjectStore = async (newData: ChatData | { 
-    prompt: string; 
-    settings: { model: string; provider: string; }; 
-    response: string;
-    timestamp: string;
-    id: string;
-  }, shouldSyncRemote = true) => {
-    const currentState = projectsStore.get();
-    const project = currentState.items[config.projectId];
-    
-    if (!project || project.type !== 'project') {
-      console.error('Project not found or invalid type');
-      return;
-    }
-
-    // If newData is a message, convert it to ChatData format
-    const updatedData: ChatData = 'messages' in newData ? newData : {
-      messages: [
-        ...(((project.components[config.componentIndex].data || {}) as ChatData).messages || []),
-        newData
-      ]
-    };
-
-    const updatedComponents = [...project.components];
-    updatedComponents[config.componentIndex] = {
-      ...updatedComponents[config.componentIndex],
-      data: updatedData
-    };
-
-    projectsStore.set({
-      ...currentState,
-      items: {
-        ...currentState.items,
-        [config.projectId]: {
-          ...project,
-          components: updatedComponents
-        }
-      }
-    });
-
-    // Only sync to remote if flag is true
-    if (shouldSyncRemote) {
-      await syncToRemote(updatedData);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,7 +127,7 @@ export const StreamChat: React.FC<BaseComponentProps> = ({ config }) => {
         : [
             ...messages.map(msg => ({
               role: "user",
-              content: msg.prompt || ""
+              content: msg.text || ""
             })),
             ...messages.map(msg => ({
               role: "assistant",
@@ -211,14 +179,24 @@ export const StreamChat: React.FC<BaseComponentProps> = ({ config }) => {
 
       // After streaming is complete, update the store with the final message
       const newMessage = {
-        prompt: promptText,
-        settings: { model: 'llama-3.1-8b-instant', provider: 'groq' },
+        text: promptText,
+        settings: { model: 'llama-3.3-70b-specdec', provider: 'groq' },
         response: fullResponse,
         timestamp: new Date().toISOString(),
         id: nanoid()
       };
 
-      updateProjectStore(newMessage);
+      // Update the store with the new message
+      const updatedChatData: ChatData = {
+        messages: [...messages, newMessage]
+      };
+      
+      // Update component data using the new store function
+      await updateComponentData(config.projectId, config.componentIndex, updatedChatData);
+      
+      // Sync to remote after local update
+      await syncToRemote(updatedChatData);
+      
       setCurrentStreamingMessage(''); // Clear streaming message after storing
       setUserPrompt(''); // Clear the prompt after storing
 
@@ -240,7 +218,7 @@ export const StreamChat: React.FC<BaseComponentProps> = ({ config }) => {
           <div className="mt-4 space-y-2">
             {messages.map(message => (
               <div key={message.id} className="p-3 bg-white rounded-md">
-                <p className="text-sm font-medium">Message: {message.prompt}</p>
+                <p className="text-sm font-medium">Message: {message.text}</p>
                 <div className="text-sm mt-2 prose prose-sm max-w-none">
                   <ReactMarkdown>
                     {message.response}

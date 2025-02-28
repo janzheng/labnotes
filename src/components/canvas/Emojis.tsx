@@ -2,27 +2,32 @@ import React, { useEffect } from 'react';
 import { type BaseComponentProps } from '@/components/canvas/BaseComponent';
 import { Button } from "@/components/ui/button";
 import { useBasic, useQuery } from '@basictech/react';
-import projectsStore from '@/lib/stores';
+import projectsStore, { isBasicTechEnabled, updateComponentData } from '@/lib/stores';
+import type { ComponentConfig } from '@/lib/stores';
 
 const deleteCursorIcon = `url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM2MEE1RkEiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cG9seWxpbmUgcG9pbnRzPSIzIDYgNSA2IDIxIDYiPjwvcG9seWxpbmU+PHBhdGggZD0iTTE5IDZ2MTRhMiAyIDAgMCAxLTIgMkg3YTIgMiAwIDAgMS0yLTJWNm0zIDBWNGEyIDMgMCAwIDEgMi0yaDRhMiAyIDAgMCAxIDIgMnYyIj48L3BhdGg+PC9zdmc+),auto`;
 
 const EMOJI_LIST = ['✨', '🌟', '💫', '⭐', '🌠', '🎇', '🎆', '🌈', '🌸', '🌺', '🍀', '🎨', '🎭', '🎪', '🎡', '🎢', '🎠'];
 
-export const Emojis: React.FC<BaseComponentProps> = ({ config }) => {
+// Define a type for the Emojis data
+interface EmojisData {
+  emojis: string[];
+}
+
+export const Emojis: React.FC<{ config: ComponentConfig }> = ({ config }) => {
+  const basicTechEnabled = isBasicTechEnabled.get();
   const { db, isSignedIn } = useBasic();
   
-  // Get remote emojis
+  // Get remote emojis only if BasicTech is enabled
   let remoteProject = useQuery(() => 
-    db?.collection('projects')
+    basicTechEnabled && isSignedIn && db?.collection('projects')
       .getAll()
       .then(projects => projects.find(p => p.localId === config.projectId))
   );
 
-  console.log('remoteProject', remoteProject);
-
-  // First sync local to remote on initial load
+  // First sync local to remote on initial load (only if BasicTech is enabled)
   useEffect(() => {
-    if (!db || !isSignedIn || remoteProject === undefined) return;
+    if (!basicTechEnabled || !isSignedIn || !db || remoteProject === undefined) return;
 
     const currentState = projectsStore.get();
     const project = currentState.items[config.projectId];
@@ -30,90 +35,41 @@ export const Emojis: React.FC<BaseComponentProps> = ({ config }) => {
     if (!project || project.type !== 'project') return;
 
     // Only sync to remote if there's no remote project yet
-    const localEmojis = ((project.components[config.componentIndex].data || {}) as any).emojis || [];
+    const localData = (project.components[config.componentIndex].data || { emojis: [] }) as EmojisData;
     
     if (!remoteProject) {
-      syncToRemote(localEmojis);
+      syncToRemote(localData);
     }
-  }, [remoteProject, db, isSignedIn]);
+  }, [remoteProject, db, isSignedIn, basicTechEnabled]);
 
-  // Then keep local in sync with remote changes
+  // Then keep local in sync with remote changes (only if BasicTech is enabled)
   useEffect(() => {
-    if (!remoteProject || !isSignedIn) return;
+    if (!basicTechEnabled || !isSignedIn || !remoteProject) return;
 
     const currentState = projectsStore.get();
     const project = currentState.items[config.projectId];
 
     if (!project || project.type !== 'project') return;
 
-    const remoteEmojis = remoteProject.data?.components?.[config.componentIndex]?.data?.emojis || [];
-    const localEmojis = ((project.components[config.componentIndex].data || {}) as any).emojis || [];
+    const remoteData = (remoteProject.data?.components?.[config.componentIndex]?.data || { emojis: [] }) as EmojisData;
+    const localData = (project.components[config.componentIndex].data || { emojis: [] }) as EmojisData;
     
-    // Only update if the arrays are actually different
-    if (JSON.stringify(remoteEmojis) !== JSON.stringify(localEmojis)) {
-      console.log('Syncing local to match remote:', remoteEmojis);
-      
-      const updatedComponents = [...project.components];
-      updatedComponents[config.componentIndex] = {
-        ...project.components[config.componentIndex],
-        data: { emojis: [...remoteEmojis] }
-      };
-
-      projectsStore.set({
-        ...currentState,
-        items: {
-          ...currentState.items,
-          [config.projectId]: {
-            ...project,
-            components: updatedComponents
-          }
-        }
-      });
+    // Only update if the data is actually different
+    if (JSON.stringify(remoteData) !== JSON.stringify(localData)) {
+      console.log('Syncing local to match remote:', remoteData);
+      updateComponentData(config.projectId, config.componentIndex, remoteData);
     }
   }, [remoteProject]);
 
-  // Get local emojis
-  const currentState = projectsStore.get();
-  const project = currentState.items[config.projectId];
-  const localEmojis = ((project?.components[config.componentIndex].data || {}) as any).emojis || [];
-  
-  // Just use remote emojis since it's our source of truth
-  const allEmojis = remoteProject?.data?.components?.[config.componentIndex]?.data?.emojis || localEmojis;
+  // Optional sync to remote function - only used when BasicTech is enabled
+  const syncToRemote = async (updatedData: EmojisData) => {
+    if (!basicTechEnabled || !isSignedIn || !db) return;
 
-  const updateProjectStore = (emojis: string[]) => {
     const currentState = projectsStore.get();
     const project = currentState.items[config.projectId];
 
     if (!project || project.type !== 'project') return;
 
-    const updatedComponents = [...project.components];
-    updatedComponents[config.componentIndex] = {
-      ...project.components[config.componentIndex],
-      data: { emojis }
-    };
-
-    projectsStore.set({
-      ...currentState,
-      items: {
-        ...currentState.items,
-        [config.projectId]: {
-          ...project,
-          components: updatedComponents
-        }
-      }
-    });
-  };
-
-  const syncToRemote = async (emojis: string[]) => {
-    if (!db || !isSignedIn) return;
-
-    // Get current project state to preserve structure
-    const currentState = projectsStore.get();
-    const project = currentState.items[config.projectId];
-
-    if (!project || project.type !== 'project') return;
-
-    // Create updated project data
     const projectData = {
       id: project.id,
       name: project.name,
@@ -121,46 +77,66 @@ export const Emojis: React.FC<BaseComponentProps> = ({ config }) => {
       type: project.type,
       components: project.components.map((comp, index) => 
         index === config.componentIndex 
-          ? { ...comp, data: { emojis } }
+          ? { ...comp, data: updatedData }
           : comp
       )
     };
 
-    if (remoteProject) {
-      await db.collection('projects').update(remoteProject.id, {
-        localId: config.projectId,
-        data: projectData,
-        lastModified: Date.now()
-      });
-    } else {
-      await db.collection('projects').add({
-        localId: config.projectId,
-        data: projectData,
-        lastModified: Date.now()
-      });
-      remoteProject = await db?.collection('projects')
-        .getAll()
-        .then(projects => projects.find(p => p.localId === config.projectId))
+    try {
+      if (remoteProject) {
+        await db.collection('projects').update(remoteProject.id, {
+          localId: config.projectId,
+          data: projectData,
+          lastModified: Date.now()
+        });
+      } else {
+        await db.collection('projects').add({
+          localId: config.projectId,
+          data: projectData,
+          lastModified: Date.now()
+        });
+      }
+    } catch (error) {
+      console.error('Error syncing to remote:', error);
+      // Continue with local operations even if remote sync fails
     }
   };
 
+  // Get local emojis from the store
+  const currentState = projectsStore.get();
+  const project = currentState.items[config.projectId];
+  const localData = (project?.components[config.componentIndex].data || { emojis: [] }) as EmojisData;
+  
+  // Use local data as the source of truth, only override with remote if BasicTech is enabled
+  const emojis = basicTechEnabled && remoteProject?.data?.components?.[config.componentIndex]?.data?.emojis 
+    ? (remoteProject.data.components[config.componentIndex].data as EmojisData).emojis 
+    : localData.emojis || [];
+
   const addEmoji = async () => {
-    if (!isSignedIn) return;
-    
     const randomEmoji = EMOJI_LIST[Math.floor(Math.random() * EMOJI_LIST.length)];
-    const newEmojis = [...allEmojis, randomEmoji];
+    const newEmojis = [...emojis, randomEmoji];
+    const updatedData: EmojisData = { emojis: newEmojis };
     
-    updateProjectStore(newEmojis);
-    await syncToRemote(newEmojis);
+    // Update local store - works regardless of BasicTech
+    await updateComponentData(config.projectId, config.componentIndex, updatedData);
+    
+    // Optionally sync to remote if BasicTech is enabled
+    if (basicTechEnabled && isSignedIn) {
+      await syncToRemote(updatedData);
+    }
   };
 
   const deleteEmoji = async (index: number) => {
-    if (!isSignedIn) return;
+    const newEmojis = emojis.filter((_: string, i: number) => i !== index);
+    const updatedData: EmojisData = { emojis: newEmojis };
     
-    const newEmojis = allEmojis.filter((_: string, i: number) => i !== index);
+    // Update local store - works regardless of BasicTech
+    await updateComponentData(config.projectId, config.componentIndex, updatedData);
     
-    updateProjectStore(newEmojis);
-    await syncToRemote(newEmojis);
+    // Optionally sync to remote if BasicTech is enabled
+    if (basicTechEnabled && isSignedIn) {
+      await syncToRemote(updatedData);
+    }
   };
 
   return (
@@ -173,7 +149,7 @@ export const Emojis: React.FC<BaseComponentProps> = ({ config }) => {
         </Button>
 
         <div className="flex flex-row flex-wrap gap-4 justify-start min-h-[60px]">
-          {allEmojis.map((emoji: string, index: number) => (
+          {emojis.map((emoji: string, index: number) => (
             <div 
               key={index}
               className="text-2xl rounded-md m-2 p-2 hover:bg-slate-100 transition-colors cursor-pointer"

@@ -16,18 +16,21 @@ import { ImageResizer } from "./image-resizer";
 import { Twitter } from "./twitter";
 import { Mathematics } from "./mathematics";
 import UpdatedImage from "./updated-image";
+import CustomDragHandle from "./custom-drag-handle";
+import CustomAddHandle from "./custom-add-handle";
+import { Extension } from "@tiptap/core";
 
 import CharacterCount from "@tiptap/extension-character-count";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import Youtube from "@tiptap/extension-youtube";
-import GlobalDragHandle from "tiptap-extension-global-drag-handle";
+// import GlobalDragHandle from "tiptap-extension-global-drag-handle";
 
 const PlaceholderExtension = Placeholder.configure({
   placeholder: ({ node, pos, editor }) => {
     if (node.type.name === "heading") {
       return `Heading ${node.attrs.level}`;
     }
-    return "Press '/' for commands";
+    return "Press 'space' for AI, or '/' for commands.";
   },
   includeChildren: true,
 });
@@ -60,8 +63,50 @@ const Horizontal = HorizontalRule.extend({
   },
 });
 
+// Completely revised SpaceAITrigger extension using keymap instead of InputRule
+// const SpaceAITrigger = Extension.create({
+//   name: 'spaceAITrigger',
+  
+//   addKeyboardShortcuts() {
+//     return {
+//       'Space': ({ editor }) => {
+//         // Check if we're at the beginning of a block
+//         const { selection, doc } = editor.state;
+//         const { from } = selection;
+        
+//         // Get the position information
+//         const resolvedPos = doc.resolve(from);
+//         const isAtBlockStart = resolvedPos.parentOffset === 0;
+        
+//         // If at the beginning of a block, trigger AI selector
+//         if (isAtBlockStart) {
+//           console.log("Space pressed at beginning of block, triggering AI selector");
+          
+//           // Trigger the AI selector
+//           setTimeout(() => {
+//             const event = new CustomEvent('novel:open-ai-selector', { 
+//               detail: { 
+//                 open: true, 
+//                 timestamp: Date.now(), 
+//                 source: 'space',
+//                 position: from
+//               } 
+//             });
+//             window.dispatchEvent(event);
+//           }, 10);
+          
+//           // Return true to prevent the default space behavior
+//           return true;
+//         }
+        
+//         // Not at beginning of block, let default space behavior happen
+//         return false;
+//       }
+//     };
+//   }
+// });
+
 export * from "./ai-highlight";
-// export * from "./content-item-menu";
 export * from "./slash-command";
 export {
   CodeBlockLowlight,
@@ -85,5 +130,8 @@ export {
   Twitter,
   Mathematics,
   CharacterCount,
-  GlobalDragHandle,
+  // GlobalDragHandle,
+  CustomDragHandle,
+  CustomAddHandle,
+  SpaceAITrigger,
 };

@@ -16,7 +16,6 @@ export {
 
 // Extensions
 export {
-  // ContentItemMenu,
   AIHighlight,
   removeAIHighlight,
   addAIHighlight,
@@ -41,16 +40,16 @@ export {
   Twitter,
   Mathematics,
   CharacterCount,
-  GlobalDragHandle,
+  // GlobalDragHandle,
+  CustomDragHandle,
+  CustomAddHandle,
+  // SpaceAITrigger,
   Command,
   renderItems,
   createSuggestionItems,
   handleCommandNavigation,
   type SuggestionItem,
 } from "./extensions";
-
-// Export our custom EnhancedDragHandle
-export { default as EnhancedDragHandle } from "../novel-tw/extensions/enhanced-drag-handle";
 
 // Plugins
 export {

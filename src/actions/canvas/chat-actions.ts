@@ -39,9 +39,107 @@ export const chatAction = defineAction({
 
     return {
       prompt: messages[messages.length - 1].content, // Get the last user message as prompt
+      text: messages[messages.length - 1].content, // Add text field to match what the component expects
       settings: { model, provider },
       response: result,
       timestamp: new Date().toISOString(),
+      id: nanoid()
+    };
+  }
+});
+
+export const generateImageAction = defineAction({
+  input: z.object({
+    prompt: z.string(),
+    model: z.string().default('recraft-ai/recraft-v3'),
+    provider: z.string().default('replicate'),
+    projectId: z.string(),
+    componentIndex: z.number(),
+    scope: z.string().default('test'),
+    filename: z.string().default('generated_image.png')
+  }),
+  handler: async ({ prompt, model, provider, scope, filename }) => {
+    let result = await executePipeline([
+      {
+        name: "ai",
+        save: "image",
+        settings: {
+          prompt,
+          provider,
+          outputType: "image",
+          model
+        }
+      },
+      {
+        name: "f2upload",
+        settings: {
+          data: "raw:image.uint8ArrayData",
+          scope,
+          filename,
+          contentType: "image/png"
+        }
+      }
+    ], {
+      useCache: false,
+      saveCache: false,
+    });
+
+    return {
+      prompt,
+      settings: { model, provider },
+      imageUrl: result?.permalink || result?.url || result?.imageUrl || null,
+      timestamp: new Date().toISOString(),
+      id: nanoid()
+    };
+  }
+});
+
+export const threadgirlAction = defineAction({
+  input: z.object({
+    command: z.string(),
+    sources: z.array(z.object({
+      url: z.string(),
+      text: z.string()
+    })),
+    prompts: z.array(z.string()),
+    query: z.string(),
+    url: z.string(),
+    useCache: z.boolean().default(true),
+    saveCache: z.boolean().default(true),
+  }),
+  handler: async ({ command, sources, prompts, query, url, useCache, saveCache }) => {
+    let pipeline: any[] = [];
+
+    if (command === "getThreadgirlPrompts") {
+      pipeline = [
+        {
+          "name": "getPrompts",
+          "settings": {
+            "useCache": useCache,
+          }
+        }
+      ]
+    } else if (command === "runThreadgirl") {
+      pipeline = [
+        {
+          "name": "threadgirlquery",
+          "settings": {
+            "query": query,
+            "useCache": useCache,
+          }
+        }
+      ]
+    }
+
+    let result = await executePipeline(pipeline, {
+      useCache: useCache,
+      saveCache: saveCache,
+    });
+    
+
+    return {
+      prompts: command === "getThreadgirlPrompts" ? result : null,
+      result: command === "runThreadgirl" ? result : null,
       id: nanoid()
     };
   }

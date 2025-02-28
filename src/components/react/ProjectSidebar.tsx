@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '@nanostores/react';
-import { projectsStore, selectedProjectId, addProject, addFolder, moveProject, deleteProject, type Project, isLoading, error, isInitialized } from '@/lib/stores';
+import { projectsStore, selectedProjectId, addProject, addFolder, moveProject, deleteProject, type Project, isLoading, error, isInitialized, getProjectsByLastModified, isProjectsSectionCollapsed, isHistorySectionCollapsed, expandedFolders, toggleFolderExpanded, showDeleteConfirmation } from '@/lib/stores';
 import {
   Sidebar,
   SidebarFooter,
@@ -18,7 +18,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useDroppable } from "@dnd-kit/core";
 import { BasicAuthButton } from '@/components/auth/BasicAuthButton';
+import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
 import { useBasic } from '@basictech/react';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+
+// Initialize dayjs with the relativeTime plugin
+dayjs.extend(relativeTime);
 
 // -----------------------------------------------------------------------------
 // DropZone Component
@@ -117,7 +123,26 @@ const ProjectItem: React.FC<ProjectItemProps> = ({ project, level = 0, dragHandl
 
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
-    deleteProject(project.id);
+    showDeleteConfirmation(project.id);
+  };
+
+  const handleAddNewPage = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (project.type === 'folder') {
+      // For folders, add a new page at the top within the folder
+      const projectId = await addProject('New Project', project.id, 0);
+    } else {
+      // For projects, add a new page as a sibling
+      const parentId = project.parentId;
+      const parentChildren = parentId 
+        ? store.items[parentId]?.children || []
+        : store.rootIds;
+      
+      const index = parentChildren.indexOf(project.id);
+      if (index !== -1) {
+        const projectId = await addProject('New Project', parentId, index + 1);
+      }
+    }
   };
 
   const handleNameSubmit = (e: React.FormEvent) => {
@@ -188,6 +213,13 @@ const ProjectItem: React.FC<ProjectItemProps> = ({ project, level = 0, dragHandl
           <div className="flex items-center gap-1">
             <button
               className="invisible flex h-5 w-5 items-center justify-center rounded hover:bg-background/80 group-hover/item:visible"
+              onClick={handleAddNewPage}
+              title={project.type === 'folder' ? "Add new page to folder" : "Add new page as sibling"}
+            >
+              <FilePlusIcon size={14} className="text-muted-foreground hover:text-foreground" />
+            </button>
+            <button
+              className="invisible flex h-5 w-5 items-center justify-center rounded hover:bg-background/80 group-hover/item:visible"
               onClick={handleDelete}
             >
               <XIcon size={14} className="text-muted-foreground hover:text-foreground" />
@@ -255,6 +287,14 @@ export function ProjectSidebar() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hoverLevel, setHoverLevel] = useState(0);
   const { db, isSignedIn } = useBasic();
+  
+  // State for project renaming in history section
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [editingProjectName, setEditingProjectName] = useState('');
+  
+  // Section collapse state
+  const projectsCollapsed = useStore(isProjectsSectionCollapsed);
+  const historyCollapsed = useStore(isHistorySectionCollapsed);
 
   // Reduced activation distance makes drag‐start a bit more lenient.
   const sensors = useSensors(useSensor(PointerSensor, {
@@ -360,7 +400,38 @@ export function ProjectSidebar() {
 
 
   const handleDelete = async (projectId: string) => {
-    await deleteProject(projectId);
+    showDeleteConfirmation(projectId);
+  };
+
+  const toggleProjectsSection = () => {
+    isProjectsSectionCollapsed.set(!projectsCollapsed);
+  };
+
+  const toggleHistorySection = () => {
+    isHistorySectionCollapsed.set(!historyCollapsed);
+  };
+
+  // Handler for renaming projects in history section
+  const handleRenameSubmit = (e: React.FormEvent | null, projectId: string) => {
+    if (e) e.preventDefault();
+    
+    if (editingProjectName.trim()) {
+      const currentState = projectsStore.get();
+      projectsStore.set({
+        ...currentState,
+        items: {
+          ...currentState.items,
+          [projectId]: {
+            ...currentState.items[projectId],
+            name: editingProjectName.trim()
+          }
+        }
+      });
+    }
+    
+    // Reset editing state
+    setEditingProjectId(null);
+    setEditingProjectName('');
   };
 
   const renderContent = () => {
@@ -395,73 +466,163 @@ export function ProjectSidebar() {
     }
 
     return (
-      <SidebarGroup>
-        <div className="flex items-center justify-between px-2">
-          <SidebarGroupLabel>Projects</SidebarGroupLabel>
-          <div className="flex gap-1">
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleAddFolder}>
-              <FolderIcon size={14} />
-            </Button>
-            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleAddProject}>
-              <FilePlusIcon size={14} />
-            </Button>
-          </div>
-        </div>
-        
-        {isClient ? (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            onDragOver={handleDragOver}
+      <>
+        <SidebarGroup>
+          <div 
+            className="flex items-center justify-between px-2 cursor-pointer mt-4" 
+            onClick={toggleProjectsSection}
           >
-            <div>
-              {store.rootIds.map((id, i) => (
-                <React.Fragment key={`root-fragment-${id}-${i}`}>
-                  <DropZone parentId={null} index={i} level={0} />
-                  {store.items[id] && (
-                    <SortableProjectItem 
-                      key={id} 
-                      project={store.items[id]} 
+            <SidebarGroupLabel>Projects</SidebarGroupLabel>
+            <div className="flex gap-1 items-center">
+              {!projectsCollapsed && (
+                <>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleAddFolder(); }}>
+                    <FolderIcon size={14} />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleAddProject(); }}>
+                    <FilePlusIcon size={14} />
+                  </Button>
+                </>
+              )}
+              {projectsCollapsed ? 
+                <ChevronRightIcon size={16} className="text-muted-foreground" /> : 
+                <ChevronDownIcon size={16} className="text-muted-foreground" />
+              }
+            </div>
+          </div>
+          
+          {!projectsCollapsed && isClient ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              onDragOver={handleDragOver}
+            >
+              <div>
+                {store.rootIds.map((id, i) => (
+                  <React.Fragment key={`root-fragment-${id}-${i}`}>
+                    <DropZone parentId={null} index={i} level={0} />
+                    {store.items[id] && (
+                      <SortableProjectItem 
+                        key={id} 
+                        project={store.items[id]} 
+                        onProjectClick={handleProjectClick}
+                      />
+                    )}
+                  </React.Fragment>
+                ))}
+                <DropZone parentId={null} index={store.rootIds.length} level={0} />
+              </div>
+
+              <DragOverlay>
+                {activeId && store.items[activeId] ? (
+                  <div className="list-none" style={{ paddingLeft: `${hoverLevel * 12}px` }}>
+                    <ProjectItem 
+                      project={store.items[activeId]} 
                       onProjectClick={handleProjectClick}
                     />
-                  )}
-                </React.Fragment>
-              ))}
-              <DropZone parentId={null} index={store.rootIds.length} level={0} />
-            </div>
-
-            <DragOverlay>
-              {activeId && store.items[activeId] ? (
-                <div className="list-none" style={{ paddingLeft: `${hoverLevel * 12}px` }}>
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+          ) : !projectsCollapsed ? (
+            <SidebarMenu className="list-none [&_li]:list-none">
+              {store.rootIds.map((id, i) => (
+                store.items[id] && (
                   <ProjectItem 
-                    project={store.items[activeId]} 
+                    key={`menu-item-${id}-${i}`}
+                    project={store.items[id]} 
                     onProjectClick={handleProjectClick}
                   />
-                </div>
-              ) : null}
-            </DragOverlay>
-          </DndContext>
-        ) : (
-          <SidebarMenu className="list-none [&_li]:list-none">
-            {store.rootIds.map((id, i) => (
-              store.items[id] && (
-                <ProjectItem 
-                  key={`menu-item-${id}-${i}`}
-                  project={store.items[id]} 
-                  onProjectClick={handleProjectClick}
-                />
-              )
-            ))}
-          </SidebarMenu>
-        )}
-      </SidebarGroup>
+                )
+              ))}
+            </SidebarMenu>
+          ) : null}
+        </SidebarGroup>
+
+        <SidebarGroup>
+          <div 
+            className="flex items-center justify-between px-2 cursor-pointer" 
+            onClick={toggleHistorySection}
+          >
+            <SidebarGroupLabel>History</SidebarGroupLabel>
+            <div className="flex gap-1 items-center">
+              {historyCollapsed ? 
+                <ChevronRightIcon size={16} className="text-muted-foreground" /> : 
+                <ChevronDownIcon size={16} className="text-muted-foreground" />
+              }
+            </div>
+          </div>
+          
+          {!historyCollapsed && (
+            <SidebarMenu className="list-none [&_li]:list-none">
+              {getProjectsByLastModified().slice(0, 10).map((project) => (
+                <SidebarMenuItem key={`history-${project.id}`} className="group/item list-none">
+                  <div
+                    className="group relative flex w-full items-center gap-2 rounded-md p-2 text-sm outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    onClick={() => handleProjectClick(project.id)}
+                  >
+                    <FileIcon size={16} />
+                    <span 
+                      className="flex-1 truncate cursor-pointer" 
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        // Set the project for editing
+                        setEditingProjectId(project.id);
+                        setEditingProjectName(project.name);
+                      }}
+                    >
+                      {editingProjectId === project.id ? (
+                        <form 
+                          onSubmit={(e) => handleRenameSubmit(e, project.id)} 
+                          className="flex-1 flex items-center" 
+                          onClick={e => e.stopPropagation()}
+                        >
+                          <Input
+                            value={editingProjectName}
+                            onChange={e => setEditingProjectName(e.target.value)}
+                            onBlur={() => handleRenameSubmit(null, project.id)}
+                            autoFocus
+                            onFocus={(e) => e.target.select()}
+                            className="relative bg-gray-50 h-8 !border-gray-400 px-2 pt-0 leading-normal baseline focus:outline-none focus:ring-0 ring-offset-0 focus:ring-offset-0 [&:focus]:ring-offset-0 [&:focus-visible]:ring-0 [&:focus-visible]:ring-offset-0"
+                          />
+                        </form>
+                      ) : (
+                        project.name
+                      )}
+                    </span>
+                    <div className="flex items-center">
+                      <span className="text-xs text-gray-400 group-hover/item:hidden">
+                        {project.lastModified ? dayjs(project.lastModified).fromNow() : 'N/A'}
+                      </span>
+                      <button
+                        className="hidden group-hover/item:flex h-5 w-5 items-center justify-center rounded hover:bg-background/80"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(project.id);
+                        }}
+                        title="Delete project"
+                      >
+                        <XIcon size={14} className="text-muted-foreground hover:text-foreground" />
+                      </button>
+                    </div>
+                  </div>
+                </SidebarMenuItem>
+              ))}
+              {getProjectsByLastModified().length === 0 && (
+                <div className="p-2 text-sm text-gray-500">No recent projects</div>
+              )}
+            </SidebarMenu>
+          )}
+        </SidebarGroup>
+      </>
     );
   };
 
   return (
     <Sidebar variant="">
+      <DeleteConfirmationModal />
       <SidebarContent>
         {renderContent()}
       </SidebarContent>

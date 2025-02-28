@@ -1,21 +1,17 @@
-
 /* 
 
-  temporary; for use with Novel
+  temporary; for use with Novel for AI generation
 
 */
 
 import type { APIRoute } from "astro";
 import { createGroq } from "@ai-sdk/groq";
-import { Ratelimit } from "@upstash/ratelimit";
-import { kv } from "@vercel/kv";
 import { streamText } from "ai";
 import { match } from "ts-pattern";
 
 const groq = createGroq({
   apiKey: import.meta.env.GROQ_API_KEY,
 });
-
 
 
 export const POST: APIRoute = async ({ request }) => {
@@ -25,8 +21,8 @@ export const POST: APIRoute = async ({ request }) => {
     const body = await request.text();
     console.log("API Route: Raw request body:", body);
     
-    const { prompt, option, command } = JSON.parse(body);
-    console.log("API Route: Parsed request:", { prompt, option, command });
+    const { prompt, option, command, messageHistory = [], action } = JSON.parse(body);
+    console.log("API Route: Parsed request:", { prompt, option, command, messageHistoryLength: messageHistory.length, action });
     
     if (!prompt) {
       console.error("API Route: Missing prompt in request body");
@@ -61,7 +57,7 @@ export const POST: APIRoute = async ({ request }) => {
           content: `The existing text is: ${prompt}`,
         },
       ])
-      .with("shorter", () => [
+      .with("shorter", "shorten", () => [
         {
           role: "system",
           content:
@@ -73,7 +69,7 @@ export const POST: APIRoute = async ({ request }) => {
           content: `The existing text is: ${prompt}`,
         },
       ])
-      .with("longer", () => [
+      .with("longer", "lengthen", () => [
         {
           role: "system",
           content:
@@ -98,17 +94,91 @@ export const POST: APIRoute = async ({ request }) => {
           content: `The existing text is: ${prompt}`,
         },
       ])
-      .with("zap", () => [
+      .with("professional", () => [
         {
           role: "system",
-          content: "You are a helpful writing assistant.",
+          content:
+            "You are an AI writing assistant that makes text sound more professional. " +
+            "Use Markdown formatting when appropriate.",
         },
         {
           role: "user",
-          content: command ? `${command}\n\nText: ${prompt}` : prompt,
+          content: `The existing text is: ${prompt}`,
         },
       ])
-      .otherwise(() => []);
+      .with("casual", () => [
+        {
+          role: "system",
+          content:
+            "You are an AI writing assistant that makes text sound more casual and conversational. " +
+            "Use Markdown formatting when appropriate.",
+        },
+        {
+          role: "user",
+          content: `The existing text is: ${prompt}`,
+        },
+      ])
+      .with("simplify", () => [
+        {
+          role: "system",
+          content:
+            "You are an AI writing assistant that simplifies text to make it easier to understand. " +
+            "Use Markdown formatting when appropriate.",
+        },
+        {
+          role: "user",
+          content: `The existing text is: ${prompt}`,
+        },
+      ])
+      .with("zap", () => {
+        if (messageHistory && messageHistory.length > 0) {
+          return [
+            {
+              role: "system",
+              content: "You are a helpful writing assistant. Maintain context from the conversation history."
+            },
+            ...messageHistory,
+          ];
+        } else {
+          return [
+            {
+              role: "system",
+              content: "You are a helpful writing assistant.",
+            },
+            {
+              role: "user",
+              content: command ? `${command}\n\nText: ${prompt}` : prompt,
+            },
+          ];
+        }
+      })
+      .otherwise(() => {
+        console.log("API Route: Unrecognized option, falling back to default:", option);
+        // If we don't recognize the option but have a command, use it as an instruction
+        if (command) {
+          return [
+            {
+              role: "system",
+              content: "You are a helpful writing assistant that follows instructions precisely.",
+            },
+            {
+              role: "user",
+              content: `<instruction>${command}</instruction>\n\nText: ${prompt}`,
+            },
+          ];
+        }
+        // Default fallback
+        return [
+          {
+            role: "system",
+            content: "You are a helpful writing assistant.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ];
+      });
 
     console.log("API Route: Generated messages:", messages);
 
@@ -116,6 +186,7 @@ export const POST: APIRoute = async ({ request }) => {
       messages,
       maxTokens: 4096,
       temperature: 0.7,
+      // model: groq("llama-3.3-70b-versatile"),
       model: groq("llama-3.3-70b-versatile"),
     });
 

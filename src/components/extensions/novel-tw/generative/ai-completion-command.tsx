@@ -1,4 +1,4 @@
-import { CommandGroup, CommandItem, CommandSeparator } from "../ui/command";
+import { CommandGroup, CommandItem, CommandSeparator } from "@/components/ui/command";
 import { useEditor } from "@/components/extensions/novel-src";
 import { Check, TextQuote, TrashIcon } from "lucide-react";
 import { useEffect } from "react";
@@ -20,16 +20,10 @@ const AICompletionCommands = ({
       .focus()
       .insertContentAt(selection.to + 1, completion)
       .run();
+    
+    // Close the AI selector after inserting
+    onDiscard();
   };
-  
-  // Auto-insert if there's no actual selection
-  useEffect(() => {
-    const selection = editor.view.state.selection;
-    // Check if this is a cursor position rather than a selection
-    if (selection.from === selection.to) {
-      insertBelow();
-    }
-  }, []);
   
   return (
     <>
@@ -51,6 +45,9 @@ const AICompletionCommands = ({
                 completion,
               )
               .run();
+            
+            // Close the AI selector after replacing
+            onDiscard();
           }}
         >
           <Check className="h-4 w-4 text-muted-foreground" />

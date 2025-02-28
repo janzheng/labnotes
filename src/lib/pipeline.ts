@@ -33,10 +33,12 @@ export async function executePipeline(pipeline: any[], settings: any = {}, useLo
     console.error("Error in executePipeline:", error);
   }
 }
-
-export async function executeStreamingPipeline(pipeline: any[], settings: any = {}) {
-  const response = await fetch('http://localhost:9999/stream-function', {
-    method: 'POST',
+export async function executeStreamingPipeline(pipeline: any[], settings: any = {}, useLocal: boolean = false) {
+  const response = await fetch(
+    useLocal ? 'http://localhost:9999/stream-function' :
+      (import.meta.env.DEV ? 'http://localhost:9999/stream-function' : 'https://coverflow.deno.dev/stream-function'),
+    {
+      method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },

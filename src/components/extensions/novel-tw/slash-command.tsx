@@ -38,6 +38,7 @@ export const suggestionItems = createSuggestionItems([
       
       // Trigger the AI selector
       setTimeout(() => {
+        console.log("Triggering AI selector");
         const event = new CustomEvent('novel:open-ai-selector', { 
           detail: { open: true, timestamp: Date.now() } 
         });

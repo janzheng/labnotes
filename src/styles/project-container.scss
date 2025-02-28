@@ -9,3 +9,11 @@
 body {
   background-color: var(--sidebar);
 }
+
+button svg,
+.icon,
+[role="button"] svg,
+svg[role="button"],
+svg[onclick] {
+  cursor: pointer;
+}

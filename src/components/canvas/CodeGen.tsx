@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent, BubbleMenu } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import type { ComponentConfig } from '@/lib/stores';
-import projectsStore from '@/lib/stores';
+import projectsStore, { isBasicTechEnabled, updateComponentData } from '@/lib/stores';
 import type { CodeGenData, CodeGenBlock, CodeGenSettings } from '@/lib/types';
 import { Color } from '@tiptap/extension-color';
 import ListItem from '@tiptap/extension-list-item';
@@ -134,18 +134,20 @@ const EditorBlock: React.FC<{
 };
 
 const CodeGen: React.FC<{ config: ComponentConfig }> = ({ config }) => {
+  const basicTechEnabled = isBasicTechEnabled.get();
+  console.log('[basic.db] enabled:', basicTechEnabled);
   const { db, isSignedIn } = useBasic();
   
-  // Get remote project data
+  // Get remote project data only if BasicTech is enabled
   let remoteProject = useQuery(() => 
-    db?.collection('projects')
+    basicTechEnabled && db?.collection('projects')
       .getAll()
       .then(projects => projects.find(p => p.localId === config.projectId))
   );
 
   // First sync local to remote on initial load
   useEffect(() => {
-    if (!db || !isSignedIn || remoteProject === undefined) return;
+    if (!basicTechEnabled || !db || !isSignedIn || remoteProject === undefined) return;
 
     const currentState = projectsStore.get();
     const project = currentState.items[config.projectId];
@@ -158,7 +160,7 @@ const CodeGen: React.FC<{ config: ComponentConfig }> = ({ config }) => {
     if (!remoteProject) {
       syncToRemote(localData);
     }
-  }, [remoteProject, db, isSignedIn]);
+  }, [remoteProject, db, isSignedIn, basicTechEnabled]);
 
   // Keep local in sync with remote changes
   useEffect(() => {
@@ -179,8 +181,21 @@ const CodeGen: React.FC<{ config: ComponentConfig }> = ({ config }) => {
     }
   }, [remoteProject]);
 
+  // Add this effect to update data when switching between projects
+  useEffect(() => {
+    const currentState = projectsStore.get();
+    const project = currentState.items[config.projectId];
+    
+    if (!project || project.type !== 'project') return;
+    
+    const componentData = project.components[config.componentIndex].data as CodeGenData;
+    if (componentData) {
+      setData(componentData);
+    }
+  }, [config.projectId, config.componentIndex]);
+
   const syncToRemote = async (updatedData: CodeGenData) => {
-    if (!db || !isSignedIn) return;
+    if (!basicTechEnabled || !db || !isSignedIn) return;
 
     const currentState = projectsStore.get();
     const project = currentState.items[config.projectId];
@@ -217,33 +232,11 @@ const CodeGen: React.FC<{ config: ComponentConfig }> = ({ config }) => {
     }
   };
 
-  // Modify updateProjectStore to include remote sync
+  // Use the new generalized function from the store
   const updateProjectStore = async (updatedData: CodeGenData) => {
-    const currentState = projectsStore.get();
-    const project = currentState.items[config.projectId];
-
-    if (!project || project.type !== 'project') {
-      console.error('Project not found or invalid type');
-      return;
-    }
-
-    const updatedComponents = [...(project.components || [])];
-    updatedComponents[config.componentIndex] = {
-      ...updatedComponents[config.componentIndex],
-      data: updatedData
-    };
-
-    projectsStore.set({
-      ...currentState,
-      items: {
-        ...currentState.items,
-        [config.projectId]: {
-          ...project,
-          components: updatedComponents
-        }
-      }
-    });
-
+    // Update the component data using the utility function
+    await updateComponentData(config.projectId, config.componentIndex, updatedData);
+    
     // Sync to remote after local update
     await syncToRemote(updatedData);
   };

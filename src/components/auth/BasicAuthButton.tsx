@@ -26,7 +26,7 @@ export function BasicAuthButton() {
           variant="ghost" 
           size="sm" 
           onClick={signin}
-          className="h-8 w-full justify-start"
+          className="h-8 w-full justify-start cursor-pointer"
         >
           <UserIcon size={16} className="mr-2" />
           Sign In

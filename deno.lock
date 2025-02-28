@@ -1,0 +1,146 @@
+{
+  "version": "4",
+  "specifiers": {
+    "jsr:@std/cli@^1.0.12": "1.0.13",
+    "jsr:@std/encoding@^1.0.7": "1.0.7",
+    "jsr:@std/fmt@^1.0.5": "1.0.5",
+    "jsr:@std/html@^1.0.3": "1.0.3",
+    "jsr:@std/http@1.0": "1.0.13",
+    "jsr:@std/media-types@^1.1.0": "1.1.0",
+    "jsr:@std/net@^1.0.4": "1.0.4",
+    "jsr:@std/path@1.0": "1.0.8",
+    "jsr:@std/path@^1.0.8": "1.0.8",
+    "jsr:@std/streams@^1.0.9": "1.0.9"
+  },
+  "jsr": {
+    "@std/cli@1.0.13": {
+      "integrity": "5db2d95ab2dca3bca9fb6ad3c19908c314e93d6391c8b026725e4892d4615a69"
+    },
+    "@std/encoding@1.0.7": {
+      "integrity": "f631247c1698fef289f2de9e2a33d571e46133b38d042905e3eac3715030a82d"
+    },
+    "@std/fmt@1.0.5": {
+      "integrity": "0cfab43364bc36650d83c425cd6d99910fc20c4576631149f0f987eddede1a4d"
+    },
+    "@std/html@1.0.3": {
+      "integrity": "7a0ac35e050431fb49d44e61c8b8aac1ebd55937e0dc9ec6409aa4bab39a7988"
+    },
+    "@std/http@1.0.13": {
+      "integrity": "d29618b982f7ae44380111f7e5b43da59b15db64101198bb5f77100d44eb1e1e",
+      "dependencies": [
+        "jsr:@std/cli",
+        "jsr:@std/encoding",
+        "jsr:@std/fmt",
+        "jsr:@std/html",
+        "jsr:@std/media-types",
+        "jsr:@std/net",
+        "jsr:@std/path@^1.0.8",
+        "jsr:@std/streams"
+      ]
+    },
+    "@std/media-types@1.1.0": {
+      "integrity": "c9d093f0c05c3512932b330e3cc1fe1d627b301db33a4c2c2185c02471d6eaa4"
+    },
+    "@std/net@1.0.4": {
+      "integrity": "2f403b455ebbccf83d8a027d29c5a9e3a2452fea39bb2da7f2c04af09c8bc852"
+    },
+    "@std/path@1.0.8": {
+      "integrity": "548fa456bb6a04d3c1a1e7477986b6cffbce95102d0bb447c67c4ee70e0364be"
+    },
+    "@std/streams@1.0.9": {
+      "integrity": "a9d26b1988cdd7aa7b1f4b51e1c36c1557f3f252880fa6cc5b9f37078b1a5035"
+    }
+  },
+  "workspace": {
+    "dependencies": [
+      "jsr:@deno/dnt@~0.41.3"
+    ],
+    "packageJson": {
+      "dependencies": [
+        "npm:@ai-sdk/groq@^1.1.10",
+        "npm:@ai-sdk/openai@^1.1.13",
+        "npm:@ai-sdk/react@^1.1.17",
+        "npm:@astrojs/react@^4.2.0",
+        "npm:@basictech/react@0.5",
+        "npm:@browserai/browserai@^1.0.29",
+        "npm:@deno/astro-adapter@0.2",
+        "npm:@dnd-kit/core@^6.3.1",
+        "npm:@dnd-kit/sortable@10",
+        "npm:@dnd-kit/utilities@^3.2.2",
+        "npm:@emotion/react@^11.14.0",
+        "npm:@emotion/styled@^11.14.0",
+        "npm:@radix-ui/react-dialog@^1.1.6",
+        "npm:@radix-ui/react-popover@^1.1.6",
+        "npm:@radix-ui/react-scroll-area@^1.2.3",
+        "npm:@radix-ui/react-separator@^1.1.2",
+        "npm:@radix-ui/react-slot@^1.1.2",
+        "npm:@radix-ui/react-tooltip@^1.1.8",
+        "npm:@tailwindcss/postcss@^4.0.8",
+        "npm:@tailwindcss/typography@~0.5.16",
+        "npm:@tailwindcss/vite@^4.0.7",
+        "npm:@tippyjs/react@^4.2.6",
+        "npm:@tiptap/core@^2.11.5",
+        "npm:@tiptap/extension-character-count@^2.11.5",
+        "npm:@tiptap/extension-code-block-lowlight@^2.11.5",
+        "npm:@tiptap/extension-color@^2.11.5",
+        "npm:@tiptap/extension-highlight@^2.11.5",
+        "npm:@tiptap/extension-image@^2.11.5",
+        "npm:@tiptap/extension-link@^2.11.5",
+        "npm:@tiptap/extension-list-item@^2.11.5",
+        "npm:@tiptap/extension-ordered-list@^2.11.5",
+        "npm:@tiptap/extension-placeholder@^2.11.5",
+        "npm:@tiptap/extension-task-item@^2.11.5",
+        "npm:@tiptap/extension-task-list@^2.11.5",
+        "npm:@tiptap/extension-text-style@^2.11.5",
+        "npm:@tiptap/extension-underline@^2.11.5",
+        "npm:@tiptap/extension-youtube@^2.11.5",
+        "npm:@tiptap/pm@^2.11.5",
+        "npm:@tiptap/react@^2.11.5",
+        "npm:@tiptap/starter-kit@^2.11.5",
+        "npm:@tiptap/suggestion@^2.11.5",
+        "npm:@types/react-dom@^19.0.4",
+        "npm:@types/react@^19.0.10",
+        "npm:@upstash/ratelimit@^2.0.5",
+        "npm:@vercel/kv@3",
+        "npm:ai@^4.1.45",
+        "npm:astro@^5.3.0",
+        "npm:autoprefixer@^10.4.20",
+        "npm:class-variance-authority@~0.7.1",
+        "npm:clsx@^2.1.1",
+        "npm:cmdk@1.0.0",
+        "npm:cssnano@^7.0.6",
+        "npm:dayjs@^1.11.13",
+        "npm:is-emoji-supported@^0.0.5",
+        "npm:jotai@^2.12.1",
+        "npm:katex@~0.16.21",
+        "npm:lowlight@^3.3.0",
+        "npm:lucide-react@0.475",
+        "npm:nanoid@^5.1.0",
+        "npm:nanostores@~0.11.4",
+        "npm:next-themes@~0.4.4",
+        "npm:postcss-discard-comments@^7.0.3",
+        "npm:postcss-import@^16.1.0",
+        "npm:postcss-nesting@^13.0.1",
+        "npm:postcss@^8.5.3",
+        "npm:react-dom@19",
+        "npm:react-markdown@10",
+        "npm:react-moveable@0.56",
+        "npm:react-tweet@^3.2.1",
+        "npm:react@19",
+        "npm:sass@^1.85.0",
+        "npm:sonner@^2.0.1",
+        "npm:tailwind-merge@^3.0.1",
+        "npm:tailwindcss-animate@^1.0.7",
+        "npm:tailwindcss@^4.0.7",
+        "npm:tippy.js@^6.3.7",
+        "npm:tiptap-extension-global-drag-handle@~0.1.18",
+        "npm:tiptap-footnotes@^2.0.3",
+        "npm:tiptap-markdown@~0.8.10",
+        "npm:ts-pattern@^5.6.2",
+        "npm:tunnel-rat@~0.1.2",
+        "npm:unstorage@^1.14.4",
+        "npm:use-debounce@^10.0.4"
+      ]
+    }
+  }
+}

@@ -5,7 +5,11 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview",
+    "preview": "deno run --allow-net --allow-read --allow-env --allow-import ./dist/server/entry.mjs",
+    "build-preview": "npm run build && npm run preview",
+    "deno": "astro build && deno run --allow-net --allow-read --allow-env --watch ./dist/server/entry.mjs",
+    "staging": "npm run build && deployctl deploy --project=labspace --no-static--include=./dist ./dist/server/entry.mjs",
+    "prod": "npm run build && deployctl deploy --prod --project=labspace --no-static--include=./dist ./dist/server/entry.mjs",
     "commit": "git add . && git commit && git push",
     "astro": "astro"
   },
@@ -59,6 +63,7 @@
     "clsx": "^2.1.1",
     "cmdk": "1.0.0",
     "cssnano": "^7.0.6",
+    "dayjs": "^1.11.13",
     "is-emoji-supported": "^0.0.5",
     "jotai": "^2.12.1",
     "katex": "^0.16.21",
@@ -88,6 +93,7 @@
     "use-debounce": "^10.0.4"
   },
   "devDependencies": {
+    "@deno/astro-adapter": "^0.2.0",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/sortable": "^10.0.0",
     "@tailwindcss/typography": "^0.5.16",

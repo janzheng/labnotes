@@ -1,29 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { BaseComponent, type BaseComponentProps } from '@/components/canvas/BaseComponent';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { actions } from 'astro:actions';
-import type { ChatData } from '@/lib/stores';
-import projectsStore from '@/lib/stores';
+import type { ChatData } from '@/lib/types';
+import projectsStore, { isBasicTechEnabled, updateComponentData } from '@/lib/stores';
 import ReactMarkdown from 'react-markdown';
 import { useBasic, useQuery } from '@basictech/react';
 import type { ComponentConfig } from '@/lib/stores';
 
-export const Chat: React.FC<BaseComponentProps> = ({ config }) => {
+export const Chat: React.FC<{ config: ComponentConfig }> = ({ config }) => {
   const [loading, setLoading] = useState(false);
   const [input, setInput] = useState('');
+  const basicTechEnabled = isBasicTechEnabled.get();
+  console.log('[basic.db] enabled:', basicTechEnabled);
   const { db, isSignedIn } = useBasic();
   
-  // Get remote project data
+  // Get remote project data only if BasicTech is enabled
   let remoteProject = useQuery(() => 
-    db?.collection('projects')
+    basicTechEnabled && db?.collection('projects')
       .getAll()
       .then(projects => projects.find(p => p.localId === config.projectId))
   );
 
   // First sync local to remote on initial load
   useEffect(() => {
-    if (!db || !isSignedIn || remoteProject === undefined) return;
+    if (!basicTechEnabled || !db || !isSignedIn || remoteProject === undefined) return;
 
     const currentState = projectsStore.get();
     const project = currentState.items[config.projectId];
@@ -31,10 +32,12 @@ export const Chat: React.FC<BaseComponentProps> = ({ config }) => {
     if (!project || project.type !== 'project') return;
 
     // Only sync to remote if there's no remote project yet
+    const localData = project.components[config.componentIndex].data as ChatData;
+    
     if (!remoteProject) {
-      syncToRemote(project.components[config.componentIndex].data);
+      syncToRemote(localData);
     }
-  }, [remoteProject, db, isSignedIn]);
+  }, [remoteProject, db, isSignedIn, basicTechEnabled]);
 
   // Keep local in sync with remote changes
   useEffect(() => {
@@ -45,18 +48,24 @@ export const Chat: React.FC<BaseComponentProps> = ({ config }) => {
 
     if (!project || project.type !== 'project') return;
 
-    const remoteData = remoteProject.data?.components?.[config.componentIndex]?.data;
-    const localData = project.components[config.componentIndex].data;
+    const remoteData = remoteProject.data?.components?.[config.componentIndex]?.data as ChatData;
+    const localData = project.components[config.componentIndex].data as ChatData;
     
     if (JSON.stringify(remoteData) !== JSON.stringify(localData)) {
       console.log('Syncing local chat to match remote:', remoteData);
       // Update local store with remote data
-      updateProjectStore(remoteData, false);
+      setData(remoteData);
     }
   }, [remoteProject]);
 
+  // Helper function to set data directly in the component state
+  const setData = (newData: ChatData) => {
+    // Using the new generic function from the store
+    updateComponentData(config.projectId, config.componentIndex, newData);
+  };
+
   const syncToRemote = async (updatedData: ChatData) => {
-    if (!db || !isSignedIn) return;
+    if (!basicTechEnabled || !db || !isSignedIn) return;
 
     const currentState = projectsStore.get();
     const project = currentState.items[config.projectId];
@@ -87,44 +96,15 @@ export const Chat: React.FC<BaseComponentProps> = ({ config }) => {
         data: projectData,
         lastModified: Date.now()
       });
+      remoteProject = await db?.collection('projects')
+        .getAll()
+        .then(projects => projects.find(p => p.localId === config.projectId))
     }
   };
 
-  // Get the stored responses from config.data
-  const chatData = (config.data || {}) as ChatData;
+  // Get the stored chat data from config.data
+  const chatData = (config.data || { messages: [] }) as ChatData;
   const messages = chatData.messages || [];
-
-  const updateProjectStore = async (newData: ChatData, shouldSyncRemote = true) => {
-    const currentState = projectsStore.get();
-    const project = currentState.items[config.projectId];
-
-    if (!project || project.type !== 'project') {
-      console.error('Project not found or invalid type');
-      return;
-    }
-
-    const updatedComponents = [...project.components];
-    updatedComponents[config.componentIndex] = {
-      ...updatedComponents[config.componentIndex],
-      data: newData
-    };
-
-    projectsStore.set({
-      ...currentState,
-      items: {
-        ...currentState.items,
-        [config.projectId]: {
-          ...project,
-          components: updatedComponents
-        }
-      }
-    });
-
-    // Only sync to remote if flag is true
-    if (shouldSyncRemote) {
-      await syncToRemote(newData);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -138,7 +118,7 @@ export const Chat: React.FC<BaseComponentProps> = ({ config }) => {
         : [
           ...messages.map(msg => ({
             role: "user",
-            content: msg.prompt || ""
+            content: msg.text || ""
           })),
           ...messages.map(msg => ({
             role: "assistant",
@@ -165,7 +145,12 @@ export const Chat: React.FC<BaseComponentProps> = ({ config }) => {
         messages: [...messages, data]
       };
       
-      await updateProjectStore(updatedChatData);
+      // Update component data using the new store function
+      await updateComponentData(config.projectId, config.componentIndex, updatedChatData);
+      
+      // Sync to remote after local update
+      await syncToRemote(updatedChatData);
+      
       setInput('');
     } catch (error) {
       console.error('Error calling Chat action:', error);
@@ -183,7 +168,7 @@ export const Chat: React.FC<BaseComponentProps> = ({ config }) => {
           <div className="mt-4 space-y-2">
             {messages.map(message => (
               <div key={message.id} className="p-3 bg-white rounded-md">
-                <p className="text-sm font-medium">Message: {message.prompt}</p>
+                <p className="text-sm font-medium">Message: {message.text}</p>
                 <div className="text-sm mt-2 prose prose-sm max-w-none">
                   <ReactMarkdown>
                     {message.response}

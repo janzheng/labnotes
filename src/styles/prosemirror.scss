@@ -1,6 +1,6 @@
 @media (min-width: 640px) {
   .ProseMirror {
-    @apply px-16 py-4;
+    @apply px-14 py-4;
   }
 }
 
@@ -14,12 +14,12 @@
 .ProseMirror .is-empty::before {
   content: attr(data-placeholder);
   float: left;
-  color: hsl(var(--muted-foreground));
+  color: var(--color-muted-foreground-light);
   pointer-events: none;
   height: 0;
 }
 .ProseMirror p.is-empty {
-  color: var(--color-muted-forground-light);
+  color: var(--color-muted-foreground-light);
 }
 .ProseMirror li.is-empty, .ProseMirror ol.footnotes.is-empty {
   &:before {
@@ -31,7 +31,7 @@
 .ProseMirror ul.is-empty:not(.list-disc) {
   &:before {
     content: attr(data-placeholder);
-    color: var(--color-muted-forground-light);
+    color: var(--color-muted-foreground-light);
     margin-left: 2.2rem;
     display: block;
   }
@@ -39,7 +39,7 @@
 .ProseMirror ul.is-empty.list-disc, .ProseMirror ol.is-empty.list-decimal {
   &:before {
     content: attr(data-placeholder);
-    color: var(--color-muted-forground-light);
+    color: var(--color-muted-foreground-light);
     position: relative;
     bottom: -6px;
     left: 6px;
@@ -183,12 +183,12 @@ ul[data-type="taskList"] li[data-checked="true"] > div > p {
 /* Overwrite tippy-box original max-width */
 
 .tippy-box {
-  max-width: 400px !important;
+  /* max-width: 400px !important; */
 }
 
 .ProseMirror:not(.dragging) .ProseMirror-selectednode {
   outline: none !important;
-  background-color: var(--novel-highlight-blue);
+  /* background-color: var(--novel-highlight-blue); */
   transition: background-color 0.2s;
   box-shadow: none;
 }
@@ -235,6 +235,66 @@ ul[data-type="taskList"] li[data-checked="true"] > div > p {
 .dark .drag-handle {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10' style='fill: rgba(255, 255, 255, 0.5)'%3E%3Cpath d='M3,2 C2.44771525,2 2,1.55228475 2,1 C2,0.44771525 2.44771525,0 3,0 C3.55228475,0 4,0.44771525 4,1 C4,1.55228475 3.55228475,2 3,2 Z M3,6 C2.44771525,6 2,5.55228475 2,5 C2,4.44771525 2.44771525,4 3,4 C3.55228475,4 4,4.44771525 4,5 C4,5.55228475 3.55228475,6 3,6 Z M3,10 C2.44771525,10 2,9.55228475 2,9 C2,8.44771525 2.44771525,8 3,8 C3.55228475,8 4,8.44771525 4,9 C4,9.55228475 3.55228475,10 3,10 Z M7,2 C6.44771525,2 6,1.55228475 6,1 C6,0.44771525 6.44771525,0 7,0 C7.55228475,0 8,0.44771525 8,1 C8,1.55228475 7.55228475,2 7,2 Z M7,6 C6.44771525,6 6,5.55228475 6,5 C6,4.44771525 6.44771525,4 7,4 C7.55228475,4 8,4.44771525 8,5 C8,5.55228475 7.55228475,6 7,6 Z M7,10 C6.44771525,10 6,9.55228475 6,9 C6,8.44771525 6.44771525,8 7,8 C7.55228475,8 8,8.44771525 8,9 C8,9.55228475 7.55228475,10 7,10 Z'%3E%3C/path%3E%3C/svg%3E");
 }
+
+/* Plus Handle Styles - adding alongside drag handle styles */
+.plus-handle {
+  position: fixed;
+  opacity: 1;
+  transition: opacity ease-in 0.2s;
+  border-radius: 0.25rem;
+  margin-left: -0.8rem; /* Position to the left of the drag handle */
+  background-color: #f1f5f9;
+  width: 1.2rem;
+  height: 1.5rem;
+  z-index: 50;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  svg {
+    width: 16px;
+    height: 16px;
+    stroke: #64748b;
+  }
+
+  &:hover {
+    background-color: #e2e8f0;
+    transition: background-color 0.2s;
+  }
+
+  &:active {
+    background-color: #cbd5e1;
+    transition: background-color 0.2s;
+  }
+
+  &.hide {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  @media screen and (max-width: 600px) {
+    display: none;
+    pointer-events: none;
+  }
+}
+
+.dark .plus-handle {
+  background-color: #334155;
+
+  svg {
+    stroke: #94a3b8;
+  }
+
+  &:hover {
+    background-color: #475569;
+  }
+
+  &:active {
+    background-color: #64748b;
+  }
+}
+
 
 /* Custom Youtube Video CSS */
 iframe {
@@ -303,5 +363,115 @@ mark[style] > strong {
   /* default is too tall for paragraphs */
   margin-bottom: 0.7rem;
   margin-top: 0.7rem;
+}
+
+/* Drag Handle Commands Styling */
+.drag-handle-commands {
+  border-radius: 6px;
+  overflow: hidden;
+  width: 220px;
+  animation: commandsFadeIn 0.15s ease-in-out;
+  transform-origin: top left;
+  box-sizing: border-box;
+  z-index: 1000; /* Ensure commands are above the hit area */
+}
+
+@keyframes commandsFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Command styling enhancements */
+.drag-handle-command {
+  max-height: 320px;
+  font-size: 0.9rem;
+  width: 100%;
+}
+
+.drag-handle-command input {
+  border-radius: 4px;
+  margin: 8px;
+  width: calc(100% - 16px) !important; /* Ensure input takes full width minus margins */
+  padding: 6px 8px;
+  font-size: 0.9rem;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  box-sizing: border-box;
+}
+
+.drag-handle-command input:focus {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.drag-handle-command [cmdk-list] {
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Delete command styling */
+.drag-handle-command [cmdk-item].text-red-500 {
+  color: #ef4444;
+}
+
+.drag-handle-command [cmdk-item].text-red-500:hover,
+.drag-handle-command [cmdk-item].text-red-500[data-selected="true"] {
+  background-color: rgba(239, 68, 68, 0.1);
+}
+
+.drag-handle-command [cmdk-item] {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 6px 8px;
+  margin: 2px 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.drag-handle-command [cmdk-item][data-selected="true"] {
+  background-color: var(--accent, #e2e8f0);
+}
+
+.drag-handle-command [cmdk-group-heading] {
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  color: var(--muted-foreground, #64748b);
+  padding: 8px 8px 4px;
+  font-weight: 500;
+}
+
+/* Dark mode specific styling */
+.dark .drag-handle-command input {
+  background: var(--input-background-dark, #1e293b);
+  border-color: var(--border-dark, #334155);
+}
+
+.dark .drag-handle-command [cmdk-item][data-selected="true"] {
+  background-color: var(--accent-dark, #334155);
+}
+
+/* Drag Handle Commands Wrapper and Hit Area */
+.drag-handle-commands-wrapper {
+  /* No visual styling needed, just container properties */
+  position: absolute;
+  pointer-events: auto;
+}
+
+.drag-handle-hit-area {
+  pointer-events: auto; /* Captures mouse events */
+  cursor: default; /* Default cursor to not confuse users */
 }
 
