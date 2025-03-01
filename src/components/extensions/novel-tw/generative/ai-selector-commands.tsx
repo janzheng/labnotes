@@ -3,6 +3,7 @@ import { getPrevText, useEditor } from "@/components/extensions/novel-src";
 import { CommandGroup, CommandItem, CommandSeparator } from "@/components/ui/command";
 import { nanoid } from "nanoid";
 import CrazySpinner from "../ui/icons/crazy-spinner";
+import { useEffect } from "react";
 
 const options = [
   {
@@ -57,6 +58,11 @@ const AISelectorCommands = ({
   isLoadingThreadgirlPrompts = false
 }: AISelectorCommandsProps) => {
   const { editor } = useEditor();
+  
+  // Debug output to verify hasSelection is working correctly
+  useEffect(() => {
+    console.log('[AI-SELECTOR-COMMANDS] hasSelection:', hasSelection);
+  }, [hasSelection]);
 
   if (showThreadgirlMenu) {
     return (

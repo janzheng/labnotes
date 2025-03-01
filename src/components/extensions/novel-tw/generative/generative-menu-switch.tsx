@@ -2,9 +2,9 @@ import { EditorBubble, removeAIHighlight, useEditor, addAIHighlight } from "@/co
 import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
 import Magic from "../ui/icons/magic";
-import { AISelector } from "./ai-selector";
+import { AISelector } from "@/components/extensions/novel-tw/generative/ai-selector";
 import { createPortal } from "react-dom";
-import AITriggerManager from "../extensions/ai-trigger-manager";
+import AITriggerManager from "@/components/extensions/novel-tw/generative/ai-trigger-manager";
 
 interface GenerativeMenuSwitchProps {
   children: ReactNode;
@@ -304,7 +304,7 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
       {showFloatingSelector && createPortal(
         <div 
           ref={floatingSelectorRef}
-          className="fixed z-50 w-[350px] rounded-md border border-muted bg-background shadow-xl"
+          className="fixed z-[5000] w-[350px] rounded-md border border-muted bg-background shadow-xl"
           style={{ 
             top: `${floatingPosition.top}px`, 
             left: `${floatingPosition.left}px` 

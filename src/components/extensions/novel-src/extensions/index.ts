@@ -106,7 +106,7 @@ const Horizontal = HorizontalRule.extend({
 //   }
 // });
 
-export * from "./ai-highlight";
+export * from "@/components/extensions/novel-tw/generative/ai-highlight";
 export * from "./slash-command";
 export {
   CodeBlockLowlight,

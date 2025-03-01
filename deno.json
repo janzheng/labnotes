@@ -1,5 +1,5 @@
 {
-  "name": "labnotes",
+  "name": "@yawnxyz/labnotes",
   "imports": {
     "@deno/dnt": "jsr:@deno/dnt@^0.41.3"
   },

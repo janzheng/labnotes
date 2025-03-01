@@ -24,23 +24,22 @@ import { Separator } from "./ui/separator";
 
 import { Footnotes, FootnoteReference, Footnote } from "tiptap-footnotes";
 
-import Emoji, { gitHubEmojis } from '@/components/tiptap/extension-emoji'
+import Emoji, { gitHubEmojis } from '@/components/extensions/novel-tw/extensions/extension-emoji'
 import Document from "@tiptap/extension-document";
 import GlobalDragHandle from "@/components/extensions/novel-src/extensions/custom-drag-handle";
 import AddLineHandle from "@/components/extensions/novel-src/extensions/custom-add-handle";
 
-import GenerativeMenuSwitch from "./generative/generative-menu-switch";
 import { uploadFn } from "./image-upload";
 import { TextButtons } from "./selectors/text-buttons";
 import { slashCommand, suggestionItems } from "./slash-command";
 
 import hljs from "highlight.js";
 import { DragStateManager } from "@/components/extensions/novel-src/extensions/drag-state-manager";
-import ClearFormatBackspace from "./extensions/clear-format-backspace";
-import { AIShortcut, SpaceAITrigger } from "./extensions/ai-shortcut";
+import ClearFormatBackspace from "@/components/extensions/novel-tw/extensions/clear-format-backspace";
 
-// Import our new AI Trigger Manager
-import AITriggerManager from "./extensions/ai-trigger-manager";
+import GenerativeMenuSwitch from "@/components/extensions/novel-tw/generative/generative-menu-switch";
+import { AIShortcut, SpaceAITrigger } from "@/components/extensions/novel-tw/generative/ai-shortcut";
+import AITriggerManager from "@/components/extensions/novel-tw/generative/ai-trigger-manager";
 
 // Debug logger
 function logDebug(...args) {

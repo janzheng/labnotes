@@ -469,7 +469,7 @@ export function ProjectSidebar() {
       <>
         <SidebarGroup>
           <div 
-            className="flex items-center justify-between px-2 cursor-pointer mt-4" 
+            className="flex items-center justify-between px-2 cursor-pointer" 
             onClick={toggleProjectsSection}
           >
             <SidebarGroupLabel>Projects</SidebarGroupLabel>
@@ -624,6 +624,11 @@ export function ProjectSidebar() {
     <Sidebar variant="">
       <DeleteConfirmationModal />
       <SidebarContent>
+        <SidebarGroup>
+          <div className="text-lg font-semibold pt-4 px-2">
+            <a href="/" className="hover:text-gray-600 transition-colors">labnotes.</a>
+          </div>
+        </SidebarGroup>
         {renderContent()}
       </SidebarContent>
       <SidebarFooter className="space-y-2">

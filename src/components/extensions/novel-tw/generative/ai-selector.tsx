@@ -13,8 +13,8 @@ import { Button } from "../ui/button";
 import CrazySpinner from "../ui/icons/crazy-spinner";
 import Magic from "../ui/icons/magic";
 import { ScrollArea } from "../ui/scroll-area";
-import AIPostCompletionCommands from "./ai-post-completion-command";
-import AISelectorCommands from "./ai-selector-commands";
+import AIPostCompletionCommands from "@/components/extensions/novel-tw/generative/ai-post-completion-command";
+import AISelectorCommands from "@/components/extensions/novel-tw/generative/ai-selector-commands";
 import { actions } from 'astro:actions';
 //TODO: I think it makes more sense to create a custom Tiptap extension for this functionality https://tiptap.dev/docs/editor/ai/introduction
 
@@ -698,7 +698,7 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
             ) : isImageMode && generatedImageUrl ? (
               <AISelectorCommands
                 onSelect={handleCommandSelect}
-                hasSelection={editor?.state.selection.content().size > 0}
+                hasSelection={Boolean(editor?.state.selection.content().size > 0 || selectionContent?.trim().length > 0)}
                 generatedImageUrl={generatedImageUrl}
                 onInsertImage={() => {
                   // Insert the image at the cursor position
@@ -814,7 +814,11 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
                   // Regular AI selector commands (only shown when not in Threadgirl menu)
                   <AISelectorCommands
                     onSelect={handleCommandSelect}
-                    hasSelection={editor?.state.selection.content().size > 0}
+                    hasSelection={Boolean(editor?.state.selection.content().size > 0 || selectionContent?.trim().length > 0)}
+                    threadgirlPrompts={threadgirlPrompts}
+                    showThreadgirlMenu={showThreadgirlMenu}
+                    onBackFromThreadgirl={() => setShowThreadgirlMenu(false)}
+                    isLoadingThreadgirlPrompts={isLoadingThreadgirlPrompts}
                   />
                 )}
               </>
