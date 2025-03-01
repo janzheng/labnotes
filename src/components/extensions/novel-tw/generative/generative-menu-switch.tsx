@@ -1,10 +1,11 @@
+import React, { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { EditorBubble, removeAIHighlight, useEditor, addAIHighlight } from "@/components/extensions/novel-src";
-import { Fragment, type ReactNode, useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
 import Magic from "../ui/icons/magic";
 import { AISelector } from "@/components/extensions/novel-tw/generative/ai-selector";
 import { createPortal } from "react-dom";
 import AITriggerManager from "@/components/extensions/novel-tw/generative/ai-trigger-manager";
+import tippy from 'tippy.js';
 
 interface GenerativeMenuSwitchProps {
   children: ReactNode;
@@ -21,14 +22,90 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
   const floatingSelectorRef = useRef<HTMLDivElement>(null);
   const highlightAppliedRef = useRef(false); // Track if we've applied a highlight
   const [selectedContent, setSelectedContent] = useState<string>('');
+  const [aiSelectorOpen, setAiSelectorOpen] = useState(false); // Track if AI selector is open
+  const [showAISelector, setShowAISelector] = useState(false); // Track whether to show AI selector in bubble menu
+  const [savedCursorPosition, setSavedCursorPosition] = useState<number | null>(null);
+  const [floatingTippyInstance, setFloatingTippyInstance] = useState<TippyInstance | null>(null);
+  const floatingContentRef = useRef<HTMLDivElement>(null);
+  const virtualReferenceElement = useRef<any>(null);
+  const [currentCoords, setCurrentCoords] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+  
+  // Initialize: Clear any UI state storage items on component mount
+  useEffect(() => {
+    // Clear any stale state from storage on initialization
+    // console.log("[GENERATIVE-MENU-SWITCH] Initializing and clearing any stale UI state from storage");
+    sessionStorage.removeItem('novel:ai-selector-open');
+    sessionStorage.removeItem('novel:suppress-bubble-menu');
+    sessionStorage.removeItem('novel:last-mod-k-trigger');
+    sessionStorage.removeItem('novel:last-space-trigger');
+    
+    return () => {
+      // Also clear on unmount
+      sessionStorage.removeItem('novel:ai-selector-open');
+      sessionStorage.removeItem('novel:suppress-bubble-menu');
+    };
+  }, []);
+  
+  // Listen for text selection events from the AI trigger manager
+  useEffect(() => {
+    const handleTextSelected = (event: CustomEvent) => {
+      // console.log("[GENERATIVE-MENU-SWITCH] Received novel:text-selected event", event.detail);
+      
+      const { selectionContent, position } = event.detail || {};
+      
+      // Only process if we're not already showing the AI selector
+      if (aiSelectorOpen || showFloatingSelector) {
+        // console.log("[GENERATIVE-MENU-SWITCH] Ignoring selection event - AI selector already open");
+        return;
+      }
+      
+      // Store the selection content
+      if (selectionContent) {
+        // console.log("[GENERATIVE-MENU-SWITCH] Setting selected content:", selectionContent.substring(0, 20) + (selectionContent.length > 20 ? '...' : ''));
+        setSelectedContent(selectionContent);
+      }
+      
+      // Check if the selection is valid before showing the bubble menu
+      if (!selectionContent || selectionContent.trim().length === 0) {
+        // console.log("[GENERATIVE-MENU-SWITCH] Empty selection, not showing bubble menu");
+        return;
+      }
+      
+      // For text selection, we want to show the bubble menu WITHOUT the AI selector
+      // Just open the bubble menu but not the AI selector
+      // console.log("[GENERATIVE-MENU-SWITCH] Opening bubble menu");
+      setShowAISelector(false); // Make sure AI selector isn't shown
+      
+      // IMPORTANT: Remove any storage items that might be preventing the bubble menu from showing
+      sessionStorage.removeItem('novel:ai-selector-open');
+      sessionStorage.removeItem('novel:suppress-bubble-menu');
+      
+      onOpenChange(true); // Show the bubble menu with the Ask AI button
+      // console.log("[GENERATIVE-MENU-SWITCH] Bubble menu should be visible now - open:", true);
+    };
+    
+    // console.log("[GENERATIVE-MENU-SWITCH] Setting up novel:text-selected event listener");
+    window.addEventListener('novel:text-selected', handleTextSelected as EventListener);
+    
+    return () => {
+      // console.log("[GENERATIVE-MENU-SWITCH] Removing novel:text-selected event listener");
+      window.removeEventListener('novel:text-selected', handleTextSelected as EventListener);
+    };
+  }, [onOpenChange, showFloatingSelector, aiSelectorOpen]);
   
   // Handler for AI trigger manager events
   const handleAIStateChange = (isOpen: boolean, source?: string, isFloating?: boolean, position?: number, selectionContent?: string) => {
-    console.log('[GENERATIVE-MENU-SWITCH] AI state change:', { 
-      isOpen, source, isFloating, position, 
-      selectionContentLength: selectionContent?.length || 0,
-      selectionContent,
-    });
+    // console.log('[GENERATIVE-MENU-SWITCH] AI state change:', { 
+    //   isOpen, source, isFloating, position, 
+    //   selectionContentLength: selectionContent?.length || 0,
+    //   selectionContent,
+    // });
+    
+    // Save cursor position when opening the AI selector
+    if (isOpen && position !== undefined && editor) {
+      setSavedCursorPosition(position);
+      // console.log('[GENERATIVE-MENU-SWITCH] Saved cursor position:', position);
+    }
     
     // Store the selection content
     if (selectionContent) {
@@ -39,44 +116,40 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
     
     if (isOpen) {
       setTriggerSource(source || null);
+      setAiSelectorOpen(true);
       
-      if (isFloating) {
+      // Only open the AI selector for specific triggers:
+      // 1. slash-command
+      // 2. space-command
+      // 3. mod-k
+      // 4. Ask AI button click
+      const shouldOpenAISelector = 
+        source === 'slash-command' || 
+        source === 'space-command' || 
+        source === 'mod-k' || 
+        source === 'button';
+      
+      if (isFloating && shouldOpenAISelector) {
         // Get the view
         const { view } = editor;
         if (view) {
           // Use the provided position if available, otherwise use current selection
           const positionToUse = position !== undefined ? position : view.state.selection.from;
-          console.log('Position to use:', positionToUse);
           
           try {
             // Different positioning logic based on trigger source
             if (source === 'slash-command') {
               // For slash command: position at the end of the line where slash command was triggered
               const { state } = view;
-              // Ensure position is valid by clamping to document bounds
               const safePosition = Math.min(Math.max(0, positionToUse), state.doc.content.size);
-              console.log('Using safe position:', safePosition);
-              
-              const resolvedPos = state.doc.resolve(safePosition);
-              console.log('Resolved position:', {
-                pos: safePosition,
-                parentOffset: resolvedPos.parentOffset,
-                start: resolvedPos.start(),
-                end: resolvedPos.end()
-              });
-              
-              // Get coordinates directly at the position
               const cursorCoords = view.coordsAtPos(safePosition);
-              console.log('Cursor coordinates:', cursorCoords);
               
-              // Set position for floating selector - use direct cursor position
-              setFloatingPosition({
-                top: cursorCoords.bottom,
-                left: cursorCoords.left
-              });
-              console.log('Set floating position to:', { 
-                top: cursorCoords.bottom, 
-                left: cursorCoords.left 
+              // Store coordinates for getReferenceClientRect
+              setCurrentCoords({
+                top: cursorCoords.top,
+                left: cursorCoords.left,
+                width: 0,
+                height: cursorCoords.bottom - cursorCoords.top
               });
             } else {
               // For selection highlight: position at the bottom of the selection
@@ -88,9 +161,12 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
               const selectionEndCoords = view.coordsAtPos(selectionTo);
               const selectionStartCoords = view.coordsAtPos(selection.from);
               
-              setFloatingPosition({
-                top: selectionEndCoords.bottom + 10, // Below the selection
-                left: selectionStartCoords.left // At the start of the selection
+              // Store coordinates for getReferenceClientRect
+              setCurrentCoords({
+                top: selectionStartCoords.top,
+                left: selectionStartCoords.left,
+                width: selectionEndCoords.left - selectionStartCoords.left,
+                height: selectionEndCoords.bottom - selectionStartCoords.top
               });
             }
             
@@ -98,31 +174,30 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
             setShowFloatingSelector(true);
             
             // Apply AI highlight to selected text if there's a selection
-            if (editor.state.selection.content().size > 0) {
+            if (editor && editor.state.selection.content().size > 0) {
               addAIHighlight(editor);
               highlightAppliedRef.current = true;
             }
           } catch (error) {
             console.error('Error positioning AI selector:', error);
-            // Fallback to a safe position if there's an error
-            setFloatingPosition({
+            // Set fallback coordinates
+            setCurrentCoords({
               top: 100,
-              left: 100
+              left: 100,
+              width: 0,
+              height: 0
             });
             setShowFloatingSelector(true);
           }
-          
-          // Mark that we've stored this timestamp in localStorage
-          const now = Date.now();
-          window.localStorage.setItem('novel:ai-selector-open', now.toString());
         }
-      } else {
-        // Use bubble menu
+      } else if (shouldOpenAISelector) {
+        // Use bubble menu with AI selector
+        setShowAISelector(true); // Show AI selector in bubble menu
         onOpenChange(true);
         setFromSlashCommand(source === 'slash-command');
         
         // Apply AI highlight to selected text if there's a selection
-        if (editor.state.selection.content().size > 0) {
+        if (editor && editor.state.selection.content().size > 0) {
           addAIHighlight(editor);
           highlightAppliedRef.current = true;
         }
@@ -138,12 +213,11 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
       
       // Handle close
       setShowFloatingSelector(false);
+      setAiSelectorOpen(false);
+      setShowAISelector(false);
       onOpenChange(false);
       setFromSlashCommand(false);
       setTriggerSource(null);
-      
-      // Clean up localStorage
-      window.localStorage.removeItem('novel:ai-selector-open');
     }
   };
 
@@ -151,6 +225,7 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
   useEffect(() => {
     if (!open) {
       setFromSlashCommand(false);
+      setShowAISelector(false);
       
       // Only remove highlighting when completely closed
       if (!showFloatingSelector && highlightAppliedRef.current) {
@@ -163,15 +238,94 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
     }
   }, [open, editor, showFloatingSelector]);
 
+  // Create/update Tippy instance when floating selector visibility changes
+  useEffect(() => {
+    // Clean up existing instance first
+    if (floatingTippyInstance) {
+      floatingTippyInstance.destroy();
+    }
+    
+    // Only create a new Tippy instance if we're showing the floating selector and have valid coordinates
+    if (showFloatingSelector && currentCoords && floatingContentRef.current) {
+      // Create a DOM element to attach Tippy to
+      const virtualEl = document.createElement('div');
+      document.body.appendChild(virtualEl);
+      
+      // Create new Tippy instance with the proper virtual positioning approach
+      const instance = tippy(virtualEl, {
+        getReferenceClientRect: () => ({
+          width: currentCoords.width,
+          height: currentCoords.height,
+          top: currentCoords.top,
+          bottom: currentCoords.top + currentCoords.height,
+          left: currentCoords.left,
+          right: currentCoords.left + currentCoords.width,
+          x: currentCoords.left,
+          y: currentCoords.top
+        }),
+        content: floatingContentRef.current,
+        placement: 'bottom-start',
+        appendTo: document.body,
+        interactive: true,
+        trigger: 'manual',
+        arrow: false,
+        offset: [0, 10],
+        animation: 'fade',
+        duration: 100,
+        hideOnClick: false,
+        theme: 'light',
+        popperOptions: {
+          strategy: 'fixed',
+          modifiers: [
+            {
+              name: 'flip',
+              options: {
+                fallbackPlacements: ['top-start', 'bottom-end', 'top-end']
+              }
+            },
+            {
+              name: 'preventOverflow',
+              options: {
+                boundary: 'viewport',
+                padding: 8
+              }
+            }
+          ]
+        }
+      });
+      
+      // Show the tooltip
+      instance.show();
+      setFloatingTippyInstance(instance);
+      
+      return () => {
+        // Clean up Tippy instance and DOM element
+        if (instance && instance.state && !instance.state.isDestroyed) {
+          instance.destroy();
+        }
+        if (virtualEl.parentNode) {
+          virtualEl.parentNode.removeChild(virtualEl);
+        }
+      };
+    }
+    
+    return () => {
+      // Clear the floating Tippy instance state when not showing
+      setFloatingTippyInstance(null);
+    };
+  }, [showFloatingSelector, currentCoords]);
+
   // Handle outside clicks and escape key when floating selector is shown
   useEffect(() => {
     if (!showFloatingSelector) return;
     
     // Handle clicks outside the floating selector
     const handleOutsideClick = (event: MouseEvent) => {
+      const tippyContent = document.querySelector('.tippy-content');
+      
       if (
-        floatingSelectorRef.current && 
-        !floatingSelectorRef.current.contains(event.target as Node)
+        tippyContent && 
+        !tippyContent.contains(event.target as Node)
       ) {
         handleCloseFloatingSelector();
       }
@@ -196,11 +350,18 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
   }, [showFloatingSelector]);
 
   const handleCloseFloatingSelector = () => {
-    setShowFloatingSelector(false);
+    // Hide Tippy instance if it exists
+    if (floatingTippyInstance && !floatingTippyInstance.state.isDestroyed) {
+      floatingTippyInstance.hide();
+    }
     
-    // Clean up localStorage
-    window.localStorage.removeItem('novel:ai-selector-open');
-    window.localStorage.removeItem('novel:suppress-bubble-menu');
+    setShowFloatingSelector(false);
+    setAiSelectorOpen(false);
+    setShowAISelector(false);
+    
+    // Clean up sessionStorage items
+    sessionStorage.removeItem('novel:ai-selector-open');
+    sessionStorage.removeItem('novel:suppress-bubble-menu');
     
     // Only remove highlight now, when completely closed
     if (highlightAppliedRef.current) {
@@ -210,6 +371,29 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
         editor.commands.unsetHighlight();
       }
     }
+    
+    // Restore the cursor position if we have one
+    if (savedCursorPosition !== null && editor) {
+      // console.log('[GENERATIVE-MENU-SWITCH] Restoring cursor position:', savedCursorPosition);
+      setTimeout(() => {
+        // Avoid using commands.focus() without position as it can reset cursor
+        editor.commands.setTextSelection(savedCursorPosition);
+        editor.commands.focus();
+      }, 10);
+    }
+    
+    // Dispatch cancel event to notify other components
+    const cancelEvent = new CustomEvent('novel:cancel-ai-selector', {
+      detail: {
+        open: false,
+        source: 'cancel',
+        position: savedCursorPosition
+      }
+    });
+    window.dispatchEvent(cancelEvent);
+    
+    // Clear any selection content
+    setSelectedContent('');
     
     // Also inform the parent component that the AI selector is closed
     onOpenChange(false);
@@ -229,10 +413,39 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
     }
   }, [showFloatingSelector, open, editor]);
 
+  // Explicitly manage sessionStorage for AI selector state whenever the state changes
+  useEffect(() => {
+    if (aiSelectorOpen) {
+      sessionStorage.setItem('novel:ai-selector-open', 'true');
+    } else {
+      sessionStorage.removeItem('novel:ai-selector-open');
+    }
+  }, [aiSelectorOpen]);
+
+  // Explicitly manage sessionStorage for bubble menu whenever the menu state changes
+  useEffect(() => {
+    if (open && !showAISelector) {
+      // Bubble menu is open, make sure it's not suppressed
+      sessionStorage.removeItem('novel:suppress-bubble-menu');
+    }
+  }, [open, showAISelector]);
+
+  // Clean up Tippy instance on component unmount
+  useEffect(() => {
+    return () => {
+      if (floatingTippyInstance && !floatingTippyInstance.state.isDestroyed) {
+        floatingTippyInstance.destroy();
+      }
+    };
+  }, [floatingTippyInstance]);
+
   return (
     <>
       {/* AI Trigger Manager to handle events */}
       <AITriggerManager onAIStateChange={handleAIStateChange} />
+      
+      {/* Add debug messages */}
+      {/* {console.log("[GENERATIVE-MENU-SWITCH] Rendering. open:", open, "showAISelector:", showAISelector)} */}
       
       {/* Regular Bubble Menu */}
       <EditorBubble
@@ -241,6 +454,7 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
           duration: [100, 0], // Quick fade in, no animation out
           animation: "fade",
           onHidden: () => {
+            // console.log("[GENERATIVE-MENU-SWITCH] Bubble menu hidden");
             // Don't remove highlight here, only update the menu state
             onOpenChange(false);
             
@@ -252,74 +466,101 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
               editor.chain().unsetHighlight().run();
             }
           },
+          onShow: () => {
+            // console.log("[GENERATIVE-MENU-SWITCH] Bubble menu shown");
+          }
         }}
         className="flex w-fit max-w-[90vw] overflow-hidden rounded-md border border-muted bg-background shadow-xl"
       >
-        {open && <AISelector 
-          open={open} 
-          onOpenChange={onOpenChange} 
-          fromSlashCommand={fromSlashCommand}
-          selectionContent={selectedContent} 
-        />}
-        {!open && (
-          <Fragment>
-            <Button
-              className="gap-1 rounded-none text-purple-500"
-              variant="ghost"
-              onClick={() => {
-                // Apply AI highlight if there's a selection
-                if (editor && editor.state.selection.content().size > 0) {
-                  addAIHighlight(editor);
-                  highlightAppliedRef.current = true;
-                }
-                
-                // Use the same mechanism as other triggers
-                const now = Date.now();
-                window.localStorage.setItem('novel:ai-selector-open', now.toString());
-                
-                // Dispatch an event to open the AI selector
-                const event = new CustomEvent('novel:open-ai-selector', {
-                  detail: {
-                    open: true,
-                    timestamp: now,
-                    source: 'button',
-                    position: editor.state.selection.from,
-                    hasSelection: editor.state.selection.content().size > 0
+        {open && showAISelector && (
+          <>
+            {/* {console.log("[GENERATIVE-MENU-SWITCH] Rendering AI Selector in bubble menu")} */}
+            <AISelector 
+              open={open} 
+              onOpenChange={onOpenChange} 
+              fromSlashCommand={fromSlashCommand}
+              selectionContent={selectedContent} 
+            />
+          </>
+        )}
+        {(!open || !showAISelector) && (
+          <>
+            {/* {console.log("[GENERATIVE-MENU-SWITCH] Rendering regular bubble menu buttons")} */}
+            <Fragment>
+              <Button
+                className="gap-1 rounded-none text-purple-500"
+                variant="ghost"
+                onClick={() => {
+                  // console.log("[GENERATIVE-MENU-SWITCH] Ask AI button clicked");
+                  
+                  // Save cursor position before doing anything
+                  if (editor) {
+                    const cursorPos = editor.state.selection.from;
+                    setSavedCursorPosition(cursorPos);
+                    // console.log("[GENERATIVE-MENU-SWITCH] Saved cursor position:", cursorPos);
                   }
-                });
-                window.dispatchEvent(event);
-              }}
-              size="sm"
-              data-ai-trigger="true"
-            >
-              <Magic className="h-5 w-5" />
-              Ask AI
-            </Button>
-            {children}
-          </Fragment>
+                  
+                  // Apply AI highlight if there's a selection
+                  if (editor && editor.state.selection.content().size > 0) {
+                    addAIHighlight(editor);
+                    highlightAppliedRef.current = true;
+                  }
+                  
+                  // Get the selection content if any
+                  let selectionContent = '';
+                  if (editor && editor.state.selection.content().size > 0) {
+                    const slice = editor.state.selection.content();
+                    selectionContent = editor.storage.markdown.serializer.serialize(slice.content);
+                  }
+                  
+                  // Set AI selector as open
+                  setAiSelectorOpen(true);
+                  
+                  // Ensure sessionStorage is properly set for the bubble menu component to know
+                  sessionStorage.setItem('novel:ai-selector-open', 'true');
+                  sessionStorage.setItem('novel:suppress-bubble-menu', 'true');
+                  
+                  // Dispatch an event to open the AI selector
+                  const event = new CustomEvent('novel:open-ai-selector', {
+                    detail: {
+                      open: true,
+                      source: 'button',
+                      position: editor?.state.selection.from,
+                      hasSelection: editor?.state.selection.content().size > 0,
+                      selectionContent
+                    }
+                  });
+                  window.dispatchEvent(event);
+                  
+                  // Close the bubble menu since we're opening the AI selector
+                  onOpenChange(false);
+                }}
+                size="sm"
+                data-ai-trigger="true"
+              >
+                <Magic className="h-5 w-5" />
+                Ask AI
+              </Button>
+              {children}
+            </Fragment>
+          </>
         )}
       </EditorBubble>
 
-      {/* Floating AI Selector */}
-      {showFloatingSelector && createPortal(
-        <div 
-          ref={floatingSelectorRef}
-          className="fixed z-[5000] w-[350px] rounded-md border border-muted bg-background shadow-xl"
-          style={{ 
-            top: `${floatingPosition.top}px`, 
-            left: `${floatingPosition.left}px` 
-          }}
-        >
-          <AISelector 
-            open={true} 
-            onOpenChange={handleCloseFloatingSelector} 
-            fromSlashCommand={triggerSource === 'slash-command'}
-            isFloating={true}
-            selectionContent={selectedContent}
-          />
-        </div>,
-        document.body
-      )}
+      {/* Floating AI Selector Content (hidden until shown by Tippy) */}
+      <div style={{ display: 'none' }}>
+        <div ref={floatingContentRef} className="rounded-md border border-muted bg-background shadow-xl" style={{ width: '350px' }}>
+          {showFloatingSelector && (
+            <AISelector 
+              open={true} 
+              onOpenChange={handleCloseFloatingSelector} 
+              fromSlashCommand={triggerSource === 'slash-command'}
+              isFloating={true}
+              selectionContent={selectedContent}
+            />
+          )}
+        </div>
+      </div>
     </>
   );
 };

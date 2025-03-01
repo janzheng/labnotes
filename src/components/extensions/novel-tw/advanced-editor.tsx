@@ -178,8 +178,9 @@ const TailwindAdvancedEditor: React.FC<TailwindAdvancedEditorProps> = ({
       // Check if the click target is not inside the editor content
       const editorElement = containerRef.current.querySelector('.ProseMirror');
       if (editorElement && !editorElement.contains(e.target as Node)) {
-        // Focus the editor
-        editor.commands.focus('end');
+        // Focus the editor - but DON'T force cursor to the end
+        // This change allows the cursor to stay where it was
+        editor.commands.focus(); // Removed 'end' parameter
       }
     }
   }, [editor]);

@@ -1,3 +1,11 @@
+/* 
+
+  Heavily modified version of tiptap-extension-global-drag-handle
+
+*/
+
+
+
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey, NodeSelection, TextSelection } from '@tiptap/pm/state';
 import { Slice, Fragment } from '@tiptap/pm/model';

@@ -11,35 +11,27 @@ export const AIShortcut = Extension.create({
         const { selection } = editor.state;
         const { from } = selection;
 
-        // Prevent multiple triggers by checking if an AI selector is already open
-        const existingEvent = window.localStorage.getItem('novel:ai-selector-open');
+        // To prevent duplicate events, use a debounce technique
         const now = Date.now();
+        const lastTriggerTime = parseInt(window.sessionStorage.getItem('novel:last-mod-k-trigger') || '0', 10);
         
-        if (existingEvent) {
-          const lastOpened = parseInt(existingEvent, 10);
-          // If an AI selector was opened in the last 300ms, don't open another one
-          if (now - lastOpened < 300) {
-            console.log("Preventing duplicate AI selector");
-            return true;
-          }
+        // Prevent duplicate triggers within 500ms
+        if (now - lastTriggerTime < 500) {
+          console.log("Preventing duplicate Mod-k trigger");
+          return true;
         }
         
-        // Mark that we're opening an AI selector
-        window.localStorage.setItem('novel:ai-selector-open', now.toString());
-        
-        // Also set this flag to prevent the bubble menu from showing
-        window.localStorage.setItem('novel:suppress-bubble-menu', 'true');
+        // Store this trigger time
+        window.sessionStorage.setItem('novel:last-mod-k-trigger', now.toString());
         
         // Trigger the AI selector - works regardless of selection state
         setTimeout(() => {
           const event = new CustomEvent('novel:open-ai-selector', {
             detail: {
               open: true,
-              timestamp: now,
-              source: 'keyboard',
+              source: 'mod-k', // Use the same source identifier expected in the trigger manager
               position: from,
-              hasSelection: selection.from !== selection.to,
-              suppressBubbleMenu: true // Add this flag to indicate we don't want the bubble menu
+              hasSelection: selection.from !== selection.to
             }
           });
           window.dispatchEvent(event);
@@ -71,29 +63,25 @@ export const SpaceAITrigger = Extension.create({
         if (isAtBlockStart) {
           console.log("Space pressed at beginning of block, triggering AI selector");
           
-          // Prevent multiple triggers by checking if an AI selector is already open
-          const existingEvent = window.localStorage.getItem('novel:ai-selector-open');
+          // To prevent duplicate events, use a debounce technique
           const now = Date.now();
+          const lastTriggerTime = parseInt(window.sessionStorage.getItem('novel:last-space-trigger') || '0', 10);
           
-          if (existingEvent) {
-            const lastOpened = parseInt(existingEvent, 10);
-            // If an AI selector was opened in the last 300ms, don't open another one
-            if (now - lastOpened < 300) {
-              console.log("Preventing duplicate AI selector");
-              return true;
-            }
+          // Prevent duplicate triggers within 500ms
+          if (now - lastTriggerTime < 500) {
+            console.log("Preventing duplicate space trigger");
+            return true;
           }
           
-          // Mark that we're opening an AI selector
-          window.localStorage.setItem('novel:ai-selector-open', now.toString());
+          // Store this trigger time
+          window.sessionStorage.setItem('novel:last-space-trigger', now.toString());
 
           // Trigger the AI selector
           setTimeout(() => {
             const event = new CustomEvent('novel:open-ai-selector', {
               detail: {
                 open: true,
-                timestamp: now,
-                source: 'space',
+                source: 'space-command', // Use the same source identifier expected in the trigger manager
                 position: from,
                 hasSelection: false // Space trigger never has a selection
               }

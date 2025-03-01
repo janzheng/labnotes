@@ -3,42 +3,39 @@
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
 
 import { useCompletion } from "@ai-sdk/react";
-import { ArrowUp, ImageIcon, ArrowLeft } from "lucide-react";
+import { ArrowUp, ArrowLeft } from "lucide-react";
 import { useEditor } from "@/components/extensions/novel-src";
 import { addAIHighlight } from "@/components/extensions/novel-src";
 import { useState, useRef, useEffect } from "react";
 import Markdown from "react-markdown";
 import { toast } from "sonner";
-import { Button } from "../ui/button";
-import CrazySpinner from "../ui/icons/crazy-spinner";
-import Magic from "../ui/icons/magic";
-import { ScrollArea } from "../ui/scroll-area";
-import AIPostCompletionCommands from "@/components/extensions/novel-tw/generative/ai-post-completion-command";
-import AISelectorCommands from "@/components/extensions/novel-tw/generative/ai-selector-commands";
+import { Button } from "@/components/ui/button";
+import CrazySpinner from "@/components/ui/icons/crazy-spinner";
+import Magic from "@/components/ui/icons/magic";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import AIPostCompletionCommands from "./ai-post-completion-command";
+import AISelectorCommands from "./ai-selector-commands";
 import { actions } from 'astro:actions';
-//TODO: I think it makes more sense to create a custom Tiptap extension for this functionality https://tiptap.dev/docs/editor/ai/introduction
+import React from "react";
 
-interface AISelectorProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  fromSlashCommand?: boolean;
-  isFloating?: boolean;
-  selectionContent?: string;
-}
+// Import new modular components
+import ThreadgirlMenu from "./threadgirl/threadgirl-menu";
+import ImageGeneratorMenu from "./image-gen/image-generator-menu";
 
-// Define a type for threadgirl prompts
-interface ThreadgirlPrompt {
-  _id?: string;
-  name: string;
-  prompt: string;
-}
+// Import shared types
+import { 
+  AISelectorMode, 
+  type AISelectorProps, 
+  type AIMessage, 
+  AI_ACTIONS 
+} from "./utils/ai-selector-types";
 
 export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFloating = false, selectionContent = '' }: AISelectorProps) {
   const { editor } = useEditor();
   const [inputValue, setInputValue] = useState("");
-  const [messageHistory, setMessageHistory] = useState<Array<{ role: string, content: string }>>([]);
+  const [messageHistory, setMessageHistory] = useState<Array<AIMessage>>([]);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [isImageMode, setIsImageMode] = useState(false);
+  const [mode, setMode] = useState<AISelectorMode>(AISelectorMode.DEFAULT);
   const [generatedImageUrl, setGeneratedImageUrl] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [filteredOptionsExist, setFilteredOptionsExist] = useState(false);
@@ -49,10 +46,14 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
   const [isLoadingPrompts, setIsLoadingPrompts] = useState(false);
   const [threadgirlPrompts, setThreadgirlPrompts] = useState<any[] | null>(null);
   const [isLoadingThreadgirlPrompts, setIsLoadingThreadgirlPrompts] = useState(false);
-  const [showThreadgirlMenu, setShowThreadgirlMenu] = useState(false);
   const [isLoadingThreadgirl, setIsLoadingThreadgirl] = useState(false);
   const [lastPrompt, setLastPrompt] = useState("");
   const [showCompletion, setShowCompletion] = useState(true);
+  // Add a dedicated state for Threadgirl results
+  const [threadgirlResult, setThreadgirlResult] = useState<string | null>(null);
+  const [showThreadgirlResult, setShowThreadgirlResult] = useState(false);
+  // Add a dedicated state to track the current loading operation type
+  const [loadingOperation, setLoadingOperation] = useState<string | null>(null);
 
   // Log the opening state for debugging
   useEffect(() => {
@@ -139,13 +140,14 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
 
       // If no specific action was set, set a default one to ensure commands show up
       if (!action) {
-        setAction("default_completion");
+        setAction(AI_ACTIONS.DEFAULT_COMPLETION);
       }
 
-      // For selection-based transformations, replace the selected text
-      if (action === "transform_selection") {
-        // The useEffect will handle the replacement when isLoading becomes false
-      }
+      // Switch to completion mode
+      setMode(AISelectorMode.COMPLETION);
+      
+      // Clear the input field to ensure options show in post-completion menu
+      setInputValue("");
     },
   });
 
@@ -200,7 +202,7 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
       setLastPrompt(inputValue);
 
       // Set a default action to ensure completion commands show up
-      setAction("default_completion");
+      setAction(AI_ACTIONS.DEFAULT_COMPLETION);
 
       // Send the complete message history to maintain context
       await complete(textToSend, {
@@ -218,46 +220,6 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
     }
   };
 
-  const handleGenerateImage = async () => {
-    if (!inputValue.trim()) {
-      toast.error("Please enter an image description");
-      return;
-    }
-
-    try {
-      setIsGeneratingImage(true);
-      // Save a copy of the prompt
-      setImagePrompt(inputValue.trim());
-
-      console.log("Generating image with prompt:", inputValue);
-
-      // Use the Astro action instead of fetch API
-      const { data, error } = await actions.canvas.generateImage({
-        prompt: inputValue.trim(),
-        model: 'recraft-ai/recraft-v3',
-        provider: 'replicate',
-        projectId: 'current-project', // This will need to be replaced with actual project ID
-        componentIndex: 0, // This will need to be replaced with actual component index
-      });
-
-      if (error) {
-        console.error("Error generating image:", error);
-        throw new Error("Failed to generate image");
-      }
-
-      // Set the generated image URL from the action response
-      setGeneratedImageUrl(data.imageUrl);
-      setIsGeneratingImage(false);
-      setInputValue("");
-      toast.success("Image generated successfully!");
-
-    } catch (error) {
-      console.error("Error generating image:", error);
-      setIsGeneratingImage(false);
-      toast.error("Failed to generate image");
-    }
-  };
-
   // Add a debug button to check the message history
   // We can remove this later once everything is working
   const debugMessageHistory = () => {
@@ -266,35 +228,51 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Remove this block that auto-inserts on empty Enter
-    // if (e.key === 'Enter' && !inputValue.trim() && hasCompletion) {
-    //   e.preventDefault();
-    //   insertBelow();
-    //   return;
-    // }
+    // Restore and improve this block to auto-insert on empty Enter when in completion mode
+    if (e.key === 'Enter' && !inputValue.trim() && 
+        ((hasCompletion && mode === AISelectorMode.COMPLETION) || 
+         (showThreadgirlResult && threadgirlResult && mode === AISelectorMode.COMPLETION))) {
+      e.preventDefault();
+      // Call insertBelow function directly
+      if (editor) {
+        const selection = editor.view.state.selection;
+        editor
+          .chain()
+          .focus()
+          .insertContentAt(selection.to + 1, showThreadgirlResult && threadgirlResult ? threadgirlResult : completion)
+          .run();
+        
+        // Close the AI selector completely
+        onOpenChange(false);
+      }
+      return;
+    }
     
-    if (e.key === 'Enter' && inputValue.trim()) {
+    // Handle Enter keypress based on current mode
+    if (e.key === 'Enter') {
       // Check if there's a selected item in the command menu
       const selectedElement = commandRef.current?.querySelector('[data-selected="true"]') as HTMLElement;
-
-      // If there's a selected item, check if its text matches the input
+      
+      // If there's a selected item, let Command handle it without preventDefault
       if (selectedElement) {
-        const selectedText = selectedElement.textContent?.trim();
-
-        // If the selected text doesn't match the input, let Command handle it
-        if (selectedText && selectedText !== inputValue.trim()) {
-          return;
-        }
+        // Let the Command component handle the selection
+        return;
       }
-
-      // Otherwise, handle as a direct message
+      
+      // No menu item is selected, so handle the Enter keypress ourselves
       e.preventDefault();
-      if (isImageMode) {
-        handleGenerateImage();
-      } else if (showThreadgirlMenu) {
-        // If in Threadgirl submenu, run the custom prompt
-        handleRunThreadgirlPrompt();
-      } else {
+      
+      // Route the Enter keypress to the appropriate handler based on mode
+      if (mode === AISelectorMode.IMAGE_GENERATION) {
+        // For image generation, handle generation in the ImageGeneratorMenu component
+        // This will be triggered through a callback
+        return;
+      } else if (mode === AISelectorMode.THREADGIRL) {
+        // For threadgirl, handle in the ThreadgirlMenu component
+        // This will be triggered through a callback
+        return;
+      } else if (inputValue.trim()) {
+        // For the default mode with input, run the standard prompt
         handleComplete();
       }
     }
@@ -303,18 +281,21 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
     if (e.key === 'Backspace' && !inputValue) {
       e.preventDefault();
       
-      if (showThreadgirlMenu) {
+      if (mode === AISelectorMode.THREADGIRL) {
         // If in Threadgirl submenu, go back to main menu instead of closing
         console.log('[AI-SELECTOR] Going back to main menu from Threadgirl submenu');
-        setShowThreadgirlMenu(false);
-      } else if (hasCompletion) {
-        console.log('[AI-SELECTOR] Discarding completion on empty backspace');
+        setMode(AISelectorMode.DEFAULT);
+      } else if (hasCompletion || (showThreadgirlResult && threadgirlResult)) {
+        console.log('[AI-SELECTOR] Discarding completion or threadgirl result on empty backspace');
         // Discard the completion and clean up
         if (editor) {
           editor.chain().unsetHighlight().focus().run();
         }
         // Reset the message history or handle any other cleanup
         setMessageHistory([]);
+        setShowCompletion(false);
+        setShowThreadgirlResult(false);
+        setThreadgirlResult(null);
         onOpenChange(false);
       } else {
         console.log('[AI-SELECTOR] Closing on empty backspace');
@@ -325,25 +306,57 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
 
   // Handle command selection including the new image generation option
   const handleCommandSelect = async (value: string, option: string, promptName?: string) => {
+    console.log(`[AI-SELECTOR] handleCommandSelect called with option: ${option}`);
+    
     if (option === "generate-image") {
-      setIsImageMode(true);
+      setMode(AISelectorMode.IMAGE_GENERATION);
       setInputValue("");
     } else if (option === "get-threadgirl-prompts") {
-      try {
-        await handleGetThreadgirlPrompts();
-        // The setShowThreadgirlMenu(true) is now called inside handleGetThreadgirlPrompts
-      } catch (error) {
-        console.error("Error in handleCommandSelect:", error);
-      }
-    } else if (option === "runThreadgirl" && promptName) {
-      handleRunThreadgirlPrompt(promptName);
-    } else if (option === "tell-joke") {
-      setInputValue("Tell me a joke");
-    } else if (option === "story") {
-      setInputValue("Write a story about ");
-    } else if (option === "explain") {
-      setInputValue("Explain the concept of ");
-    } else if (hasSelection(editor) && ["improve", "fix", "shorten", "lengthen", "professional", "casual", "simplify"].includes(option)) {
+      console.log("[AI-SELECTOR] Switching to THREADGIRL mode");
+      setMode(AISelectorMode.THREADGIRL);
+      setInputValue("");
+      // Reset threadgirl result when switching to prompt selection
+      setThreadgirlResult(null);
+      setShowThreadgirlResult(false);
+    } else if (option === "threadgirl") {
+      console.log("[AI-SELECTOR] Processing Threadgirl result:", value.substring(0, 50) + "...");
+      console.log(`[AI-SELECTOR] Current isLoadingThreadgirl state: ${isLoadingThreadgirl}`);
+      
+      // Add user message to history
+      const newUserMessage = { role: "user", content: value };
+      setMessageHistory(prev => [...prev, newUserMessage]);
+      
+      // Add the result to message history
+      setMessageHistory(prev => [
+        ...prev,
+        { role: "assistant", content: value }
+      ]);
+      
+      // Store the result in the dedicated Threadgirl state
+      setThreadgirlResult(value);
+      setShowThreadgirlResult(true);
+      
+      // Switch to completion view mode
+      setMode(AISelectorMode.COMPLETION);
+      
+      console.log("[AI-SELECTOR] Using Threadgirl result directly");
+      
+      // Clear input
+      setInputValue("");
+      
+      // Set the lastPrompt for persistence
+      setLastPrompt(promptName || "Threadgirl");
+      
+      // Important: Reset the loading state here after we've processed the result
+      console.log("[AI-SELECTOR] Setting isLoadingThreadgirl to FALSE");
+      setIsLoadingThreadgirl(false);
+      // Also reset the loading operation
+      console.log("[AI-SELECTOR] Clearing loadingOperation state");
+      setLoadingOperation(null);
+    } else if (option === "set_input") {
+      // Just set the input value
+      setInputValue(value);
+    } else if (hasSelection(editor) && ["explain", "improve", "fix", "shorten", "lengthen", "professional", "casual", "simplify"].includes(option)) {
       // For selection-based options, automatically submit with the selected text
       // First use passed-in selection if available
       let selectedText = selectionContent;
@@ -367,14 +380,14 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
       setMessageHistory(prev => [...prev, newUserMessage]);
 
       // Set the current action
-      setAction("transform_selection");
+      setAction(AI_ACTIONS.TRANSFORM_SELECTION);
 
       console.log("Auto-submitting selection with command:", {
         prompt: selectedText,
         option: option,
         command: value,
         messageHistory: [...messageHistory, newUserMessage],
-        action: "transform_selection"
+        action: AI_ACTIONS.TRANSFORM_SELECTION
       });
 
       // Send to AI - use the formattedPrompt as the main prompt
@@ -383,7 +396,7 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
           prompt: selectedText,  // Original text for reference
           option: option,
           command: value,
-          action: "transform_selection",
+          action: AI_ACTIONS.TRANSFORM_SELECTION,
           messageHistory: [...messageHistory, newUserMessage]
         },
       });
@@ -401,13 +414,6 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
     if (!editor) return false;
     const selection = editor.state.selection;
     return selection.from !== selection.to;
-  };
-
-  const resetImageGeneration = () => {
-    setIsImageMode(false);
-    setGeneratedImageUrl(null);
-    setInputValue("");
-    setImagePrompt("");
   };
 
   // We'll keep replaceSelection for the transform_selection action only
@@ -432,123 +438,9 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
     onOpenChange(false);
   };
 
-  // Modify the function to handle getting prompts using the existing threadgirlAction
-  const handleGetThreadgirlPrompts = async () => {
-    try {
-      console.log("Getting available threadgirl prompts");
-      setIsLoadingThreadgirlPrompts(true);
-      
-      const { data, error } = await actions.canvas.threadgirl({
-        command: 'getThreadgirlPrompts',
-        sources: [],
-        prompts: [],
-        query: "",
-        url: '',
-        useCache: true,
-        saveCache: true,
-      });
-
-      if (error) throw error;
-      
-      console.log("Threadgirl prompts:", data.prompts);
-      setThreadgirlPrompts(data.prompts || []);
-      
-      // Explicitly set the menu to show after loading prompts
-      setShowThreadgirlMenu(true);
-      setIsLoadingThreadgirlPrompts(false);
-    } catch (error) {
-      console.error("Error getting threadgirl prompts:", error);
-      setIsLoadingThreadgirlPrompts(false);
-      toast.error("Failed to get threadgirl prompts");
-    }
-  };
-
-  // Define the handleRunThreadgirlPrompt function
-  const handleRunThreadgirlPrompt = async (promptName?: string) => {
-    try {
-      console.log(`Running threadgirl prompt${promptName ? `: ${promptName}` : ''}`);
-      setIsLoadingThreadgirl(true);
-      
-      // Get selected text - first use the passed-in selection if available
-      let selectedText = selectionContent.trim();
-      
-      // Only query editor for selection if no passed-in selection is available
-      if (!selectedText && editor) {
-        const slice = editor.state.selection.content();
-        selectedText = editor.storage.markdown.serializer.serialize(slice.content).trim();
-      }
-      
-      // Format the query based on the Threadgirl query format
-      let queryText = inputValue.trim();
-      
-      // Add selected text to the query if it exists
-      if (selectedText) {
-        queryText = queryText 
-          ? `${queryText} ${selectedText}` 
-          : selectedText;
-      }
-      
-      // Add prompt name in curly braces if provided
-      if (promptName) {
-        queryText = `${queryText} {${promptName}}`;
-      }
-      
-      if (!queryText) {
-        toast.error("Please enter a prompt, select text, or choose a predefined prompt");
-        setIsLoadingThreadgirl(false);
-        return;
-      }
-
-      console.log("Sending threadgirl query:", queryText);
-      
-      const { data, error } = await actions.canvas.threadgirl({
-        command: 'runThreadgirl',
-        sources: [],
-        prompts: [], // No need for separate prompts array as it's included in the query
-        query: queryText,
-        url: '',
-        useCache: true,
-        saveCache: true,
-      });
-
-      if (error) throw error;
-      
-      console.log("Threadgirl response:", data);
-      
-      // Add the response to the message history
-      if (data.result) {
-        // Add user message to history
-        const newUserMessage = { role: "user", content: queryText };
-        setMessageHistory(prev => [
-          ...prev,
-          newUserMessage,
-          { role: "assistant", content: data.result }
-        ]);
-        
-        // Set the completion directly
-        complete(data.result, {
-          body: {
-            prompt: queryText,
-            option: "threadgirl",
-            command: promptName || "custom",
-            messageHistory: [...messageHistory, newUserMessage]
-          },
-        });
-      }
-      
-      setIsLoadingThreadgirl(false);
-      setInputValue("");
-      setShowThreadgirlMenu(false);
-    } catch (error) {
-      console.error("Error running threadgirl prompt:", error);
-      setIsLoadingThreadgirl(false);
-      toast.error("Failed to run threadgirl prompt");
-    }
-  };
-
   // Add a useEffect to handle the ignore_completion action
   useEffect(() => {
-    if (action === "ignore_completion") {
+    if (action === AI_ACTIONS.IGNORE_COMPLETION) {
       // Reset the action
       setAction(null);
       
@@ -562,12 +454,12 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
   useEffect(() => {
     // When loading starts, make sure we have an action set
     if (isLoading && !action) {
-      setAction("default_completion");
+      setAction(AI_ACTIONS.DEFAULT_COMPLETION);
     }
     
     // When loading finishes and we have a completion but no specific action
     if (!isLoading && completion.length > 0 && !action) {
-      setAction("default_completion");
+      setAction(AI_ACTIONS.DEFAULT_COMPLETION);
     }
   }, [isLoading, completion, action]);
 
@@ -575,8 +467,29 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
     // When loading finishes and we have a completion, show it
     if (!isLoading && completion.length > 0) {
       setShowCompletion(true);
+      setMode(AISelectorMode.COMPLETION);
+      
+      // Clear the input field when showing completion
+      setInputValue("");
     }
   }, [isLoading, completion]);
+
+  // Handle the transform_selection action when loading completes
+  useEffect(() => {
+    if (!isLoading && action === AI_ACTIONS.TRANSFORM_SELECTION && completion) {
+      replaceSelection();
+    }
+  }, [isLoading, action, completion]);
+
+  // Add a useEffect to debug loading state changes
+  useEffect(() => {
+    console.log(`[AI-SELECTOR] isLoadingThreadgirl changed to: ${isLoadingThreadgirl}`);
+  }, [isLoadingThreadgirl]);
+
+  // Add a useEffect to debug loadingOperation changes
+  useEffect(() => {
+    console.log(`[AI-SELECTOR] loadingOperation changed to: ${loadingOperation}`);
+  }, [loadingOperation]);
 
   return (
     <Command
@@ -584,29 +497,25 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
       className={`w-[350px] ai-selector ${isFloating ? 'in-floating-container' : ''}`}
     >
       <CommandList>
-        {hasCompletion && showCompletion && !isImageMode && (
+        {/* Threadgirl result view */}
+        {showThreadgirlResult && threadgirlResult && mode === AISelectorMode.COMPLETION && (
+          <div className="flex max-h-[900px]">
+            <ScrollArea>
+              <div className="prose p-2 px-4 prose-sm">
+                <Markdown>{threadgirlResult}</Markdown>
+              </div>
+            </ScrollArea>
+          </div>
+        )}
+        
+        {/* Standard Completion view - only show if not showing Threadgirl results */}
+        {hasCompletion && showCompletion && mode === AISelectorMode.COMPLETION && !showThreadgirlResult && (
           <div className="flex max-h-[900px]">
             <ScrollArea>
               <div className="prose p-2 px-4 prose-sm">
                 <Markdown>{completion}</Markdown>
               </div>
             </ScrollArea>
-          </div>
-        )}
-
-        {isImageMode && generatedImageUrl && (
-          <div className="flex flex-col items-center p-2">
-            <img
-              src={generatedImageUrl}
-              alt="AI Generated"
-              className="max-w-full max-h-[300px] rounded-md mb-2"
-            />
-            <div className="text-sm text-center text-muted-foreground mt-2">
-              Image generated based on your prompt
-            </div>
-            <div className="text-xs text-center text-muted-foreground mt-1 italic">
-              "{imagePrompt}"
-            </div>
           </div>
         )}
 
@@ -618,14 +527,23 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
           Debug History
         </button>
 
+        {/* Loading indicator */}
         {(isLoading || isGeneratingImage || isLoadingThreadgirl) && (
-          <div className="flex h-12 w-full items-center px-4 text-sm font-medium text-muted-foreground text-purple-500">
+          <div className={`flex w-full items-center px-4 text-sm font-medium ${
+            isLoadingThreadgirl 
+              ? 'h-16 justify-center py-4 text-purple-500 bg-purple-50 border-t mt-2' 
+              : 'h-12 text-muted-foreground'
+          }`}>
             <Magic className="mr-2 h-4 w-4 shrink-0" />
-            {isImageMode 
-              ? "Generating image" 
-              : isLoadingThreadgirl 
-                ? "Running prompt" 
-                : "AI is thinking"}
+            <span className={isLoadingThreadgirl ? "font-semibold" : ""}>
+              {mode === AISelectorMode.IMAGE_GENERATION 
+                ? "Generating image..." 
+                : isLoadingThreadgirl 
+                  ? loadingOperation === 'loading_prompts'
+                    ? "Loading Threadgirl prompts..."
+                    : "Running Threadgirl prompt..." 
+                  : "AI is thinking..."}
+            </span>
             <div className="ml-2 mt-1">
               <CrazySpinner />
             </div>
@@ -634,6 +552,7 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
 
         {!isLoading && !isGeneratingImage && !isLoadingThreadgirl && (
           <>
+            {/* Input field - always shown except in some specific modes */}
             <div className="relative">
               <CommandInput
                 ref={inputRef}
@@ -641,11 +560,13 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
                 onValueChange={setInputValue}
                 autoFocus
                 placeholder={
-                  showThreadgirlMenu
+                  mode === AISelectorMode.THREADGIRL
                     ? "Search prompts or enter custom prompt..."
-                    : isImageMode 
-                      ? "Describe the image you want to generate..." 
-                      : hasCompletion 
+                    : mode === AISelectorMode.IMAGE_GENERATION 
+                      ? generatedImageUrl 
+                        ? "Press Enter to insert image, or describe new image..." 
+                        : "Describe the image you want to generate..." 
+                      : showThreadgirlResult || hasCompletion 
                         ? "Tell AI what to do next" 
                         : editor?.state.selection.content().size > 0
                           ? "Ask AI to edit or improve..."
@@ -653,11 +574,11 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
                 }
                 onFocus={() => {
                   // Only add AI highlight for direct AI button clicks, not slash or space commands
-                  if (!fromSlashCommand && !isFloating && !isImageMode) {
+                  if (!fromSlashCommand && !isFloating && mode === AISelectorMode.DEFAULT) {
                     addAIHighlight(editor);
                   }
                 }}
-                onClick={(e) => {
+                onClick={(e: React.MouseEvent) => {
                   // Prevent event from bubbling up to TipTap
                   e.preventDefault();
                   e.stopPropagation();
@@ -673,10 +594,10 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
                 size="icon"
                 className="absolute right-2 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-purple-500 hover:bg-purple-900"
                 onClick={
-                  isImageMode 
-                    ? handleGenerateImage 
-                    : showThreadgirlMenu 
-                      ? () => handleRunThreadgirlPrompt() 
+                  mode === AISelectorMode.IMAGE_GENERATION 
+                    ? () => {} // Handled by ImageGeneratorMenu
+                    : mode === AISelectorMode.THREADGIRL 
+                      ? () => {} // Handled by ThreadgirlMenu
                       : handleComplete
                 }
               >
@@ -684,32 +605,31 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
               </Button>
             </div>
             
-            {isImageMode && !generatedImageUrl ? (
-              <div className="p-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full mt-2"
-                  onClick={resetImageGeneration}
-                >
-                  Cancel Image Generation
-                </Button>
-              </div>
-            ) : isImageMode && generatedImageUrl ? (
-              <AISelectorCommands
+            {/* Different menu views based on mode */}
+            {mode === AISelectorMode.IMAGE_GENERATION ? (
+              <ImageGeneratorMenu
                 onSelect={handleCommandSelect}
-                hasSelection={Boolean(editor?.state.selection.content().size > 0 || selectionContent?.trim().length > 0)}
+                onBack={() => setMode(AISelectorMode.DEFAULT)}
+                inputValue={inputValue}
+                setInputValue={setInputValue}
+                editor={editor}
+                onImageGenerated={(url: string | null) => setGeneratedImageUrl(url)}
                 generatedImageUrl={generatedImageUrl}
-                onInsertImage={() => {
-                  // Insert the image at the cursor position
-                  if (editor) {
-                    editor.chain().focus().insertContent(`![Generated Image](${generatedImageUrl})`).run();
-                    onOpenChange(false);
-                  }
-                }}
               />
-            ) : (hasCompletion && showCompletion) ? (
-              // Show post-completion commands only when both conditions are true
+            ) : mode === AISelectorMode.THREADGIRL ? (
+              <ThreadgirlMenu
+                onSelect={handleCommandSelect}
+                onBack={() => setMode(AISelectorMode.DEFAULT)}
+                selectionContent={selectionContent}
+                inputValue={inputValue}
+                editor={editor}
+                isLoadingThreadgirl={isLoadingThreadgirl}
+                setIsLoadingThreadgirl={setIsLoadingThreadgirl}
+                loadingOperation={loadingOperation}
+                setLoadingOperation={setLoadingOperation}
+              />
+            ) : ((hasCompletion && showCompletion) || (showThreadgirlResult && threadgirlResult)) && mode === AISelectorMode.COMPLETION ? (
+              // Show post-completion commands for both regular completions and threadgirl results
               <AIPostCompletionCommands
                 onDiscard={() => {
                   // Reset states but keep the selector open to show the AI menu
@@ -722,8 +642,10 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
                   
                   // Explicitly hide the completion UI
                   setShowCompletion(false);
+                  setShowThreadgirlResult(false);
                   
-                  // No need for action state anymore since we have direct control
+                  // Reset to default mode
+                  setMode(AISelectorMode.DEFAULT);
                 }}
                 onClose={() => {
                   // Completely close the selector
@@ -732,104 +654,34 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
                   }
                   onOpenChange(false);
                 }}
-                completion={completion}
-                handleRunThreadgirlPrompt={handleRunThreadgirlPrompt}
+                completion={showThreadgirlResult && threadgirlResult ? threadgirlResult : completion}
+                handleRunThreadgirlPrompt={() => setMode(AISelectorMode.THREADGIRL)}
                 originalPrompt={lastPrompt}
               />
             ) : (
-              <>
-                {/* Show threadgirl submenu if active - completely separate section */}
-                {showThreadgirlMenu ? (
-                  // Threadgirl submenu UI
-                  <div className="">
-                    <CommandGroup heading="Threadgirl Prompts">
-                      <CommandItem
-                        onSelect={() => setShowThreadgirlMenu(false)}
-                        className="flex items-center"
-                      >
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        <span>Back to main menu</span>
-                      </CommandItem>
-                    
-                      {/* Loading state for prompts */}
-                      {isLoadingThreadgirlPrompts ? (
-                        <div className="flex h-12 w-full items-center justify-center px-4 text-sm font-medium text-muted-foreground text-purple-500">
-                          <span className="mr-2">Loading prompts</span>
-                          <div className="ml-2 mt-1">
-                            <CrazySpinner />
-                          </div>
-                        </div>
-                      ) : threadgirlPrompts && threadgirlPrompts.length > 0 ? (
-                        // Prompt list - these should receive focus with arrow navigation
-                        threadgirlPrompts.map((prompt) => (
-                          <CommandItem
-                            key={`threadgirl-prompt-${prompt._id || prompt.name}`}
-                            onSelect={() => {
-                              // Get selected text - first try using passed-in selection
-                              let selectedText = selectionContent.trim();
-                              
-                              // Only fall back to editor selection if no passed-in selection
-                              if (!selectedText && editor) {
-                                // Get plain text directly from the selection
-                                const { from, to } = editor.state.selection;
-                                selectedText = editor.state.doc.textBetween(from, to, ' ').trim();
-                              }
-                              
-                              // If there's selected text, use it instead of the placeholder
-                              if (selectedText) {
-                                // Set input value with the selected text instead of placeholder
-                                setInputValue(`{${prompt.name}} ${selectedText}`);
-                              } else {
-                                // No selection, use the placeholder as before
-                                setInputValue(`{${prompt.name}} [add your text or link]`);
-                              }
-                              
-                              // Focus the input field
-                              if (inputRef.current) {
-                                inputRef.current.focus();
-                                // If no selection, position cursor after prompt name but before the suggestion text
-                                if (!selectedText) {
-                                  const cursorPosition = `{${prompt.name}} `.length;
-                                  setTimeout(() => {
-                                    if (inputRef.current) {
-                                      inputRef.current.setSelectionRange(cursorPosition, inputRef.current.value.length);
-                                    }
-                                  }, 10);
-                                }
-                              }
-                            }}
-                            className="flex items-center"
-                          >
-                            <span>{prompt.name}</span>
-                          </CommandItem>
-                        ))
-                      ) : (
-                        <div className="p-4 text-center text-sm text-muted-foreground">
-                          No prompts available
-                        </div>
-                      )}
-                    </CommandGroup>
-                  </div>
-                ) : (
-                  // Regular AI selector commands (only shown when not in Threadgirl menu)
-                  <AISelectorCommands
-                    onSelect={handleCommandSelect}
-                    hasSelection={Boolean(editor?.state.selection.content().size > 0 || selectionContent?.trim().length > 0)}
-                    threadgirlPrompts={threadgirlPrompts}
-                    showThreadgirlMenu={showThreadgirlMenu}
-                    onBackFromThreadgirl={() => setShowThreadgirlMenu(false)}
-                    isLoadingThreadgirlPrompts={isLoadingThreadgirlPrompts}
-                  />
-                )}
-              </>
+              // Default AI selector commands
+              <AISelectorCommands
+                onSelect={handleCommandSelect}
+                hasSelection={Boolean(editor?.state.selection.content().size > 0 || selectionContent?.trim().length > 0)}
+                threadgirlPrompts={threadgirlPrompts}
+                showThreadgirlMenu={mode === AISelectorMode.THREADGIRL}
+                onBackFromThreadgirl={() => setMode(AISelectorMode.DEFAULT)}
+                isLoadingThreadgirlPrompts={isLoadingThreadgirlPrompts}
+              />
             )}
           </>
         )}
 
         <CommandEmpty>
-          {showThreadgirlMenu 
-            ? "Press Enter to threadgirl"
-            : `Press Enter to ${isImageMode ? "generate image" : "send message"}`}
+          {mode === AISelectorMode.THREADGIRL 
+            ? "Press Enter to run Threadgirl prompt"
+            : mode === AISelectorMode.IMAGE_GENERATION 
+                ? generatedImageUrl
+                  ? "Press Enter to insert image"
+                  : "Press Enter to generate image" 
+                : (showThreadgirlResult || hasCompletion) && mode === AISelectorMode.COMPLETION
+                    ? "Press Enter to insert below"
+                    : "Press Enter to send message"}
         </CommandEmpty>
       </CommandList>
     </Command>

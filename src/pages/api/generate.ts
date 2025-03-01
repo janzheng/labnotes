@@ -44,6 +44,20 @@ export const POST: APIRoute = async ({ request }) => {
           content: prompt,
         },
       ])
+      .with("explain", () => [
+        {
+          role: "system",
+          content:
+            "You are a helpful assistant. " +
+            "Limit your response to no more than 200 characters, but make sure to construct complete sentences." +
+            "Use Markdown formatting when appropriate." +
+            "Don't introduce your response with 'Here's what I think about that...' or anything like that. Just give the explanation.",
+        },
+        {
+          role: "user",
+          content: `Explain the following text: ${prompt}`,
+        },
+      ])
       .with("improve", () => [
         {
           role: "system",

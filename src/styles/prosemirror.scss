@@ -187,6 +187,7 @@ ul[data-type="taskList"] li[data-checked="true"] > div > p {
 }
 
 .ProseMirror:not(.dragging) .ProseMirror-selectednode {
+  /* this is the tiptap node selected for dragging */
   outline: none !important;
   /* background-color: var(--novel-highlight-blue); */
   transition: background-color 0.2s;
@@ -473,5 +474,15 @@ mark[style] > strong {
 .drag-handle-hit-area {
   pointer-events: auto; /* Captures mouse events */
   cursor: default; /* Default cursor to not confuse users */
+  background-color: red !important;
 }
 
+/* Drop cursor styling - add this section */
+.ProseMirror-dropcursor {
+  position: absolute;
+  border-top: 3px solid #68cef8;
+  border-radius: 2px;
+  pointer-events: none;
+  margin-top: -1px;
+  animation: dropCursorBlink 1.2s ease-in-out infinite;
+}

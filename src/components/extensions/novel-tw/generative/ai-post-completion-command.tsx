@@ -1,27 +1,29 @@
+import React from "react";
 import { CommandGroup, CommandItem, CommandSeparator } from "@/components/ui/command";
 import { useEditor } from "@/components/extensions/novel-src";
 import { Check, TextQuote, TrashIcon, Hash } from "lucide-react";
 import { useEffect } from "react";
 
-const AIPostCompletionCommands = ({
-  completion,
-  onDiscard,
-  onClose,
-  originalPrompt,
-  handleRunThreadgirlPrompt,
-}: {
+interface AIPostCompletionCommandsProps {
   completion: string;
   onDiscard: () => void;
   onClose: () => void;
   originalPrompt?: string;
   handleRunThreadgirlPrompt?: (promptName?: string) => void;
+}
+
+const AIPostCompletionCommands: React.FC<AIPostCompletionCommandsProps> = ({
+  completion,
+  onDiscard,
+  onClose,
+  originalPrompt,
 }) => {
   const { editor } = useEditor();
   
   // Helper function to insert content below
   const insertBelow = () => {
     if (!editor) return;
-    
+    // Note that Enter key for inserting below handled in ai-selector handleKeyDown
     const selection = editor.view.state.selection;
     editor
       .chain()

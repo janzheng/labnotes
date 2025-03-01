@@ -1,8 +1,9 @@
+import React from "react";
 import { ArrowDownWideNarrow, Check, RefreshCcwDot, StepForward, WrapText, Image, Wand2, Sparkles, Pencil, ImageIcon, Plug, List, ArrowLeft, ChevronRight } from "lucide-react";
 import { getPrevText, useEditor } from "@/components/extensions/novel-src";
 import { CommandGroup, CommandItem, CommandSeparator } from "@/components/ui/command";
 import { nanoid } from "nanoid";
-import CrazySpinner from "../ui/icons/crazy-spinner";
+import CrazySpinner from "@/components/ui/icons/crazy-spinner";
 import { useEffect } from "react";
 
 const options = [
@@ -47,7 +48,7 @@ interface AISelectorCommandsProps {
   isLoadingThreadgirlPrompts?: boolean;
 }
 
-const AISelectorCommands = ({ 
+const AISelectorCommands: React.FC<AISelectorCommandsProps> = ({ 
   onSelect, 
   hasSelection, 
   generatedImageUrl, 
@@ -56,7 +57,7 @@ const AISelectorCommands = ({
   showThreadgirlMenu,
   onBackFromThreadgirl,
   isLoadingThreadgirlPrompts = false
-}: AISelectorCommandsProps) => {
+}) => {
   const { editor } = useEditor();
   
   // Debug output to verify hasSelection is working correctly
@@ -141,11 +142,11 @@ const AISelectorCommands = ({
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </CommandItem>
             <CommandItem
-              onSelect={() => onSelect("Generate an image", "generate-image")}
+              onSelect={() => onSelect("Generate image", "generate-image")}
               className="flex items-center"
             >
               <ImageIcon className="mr-2 h-4 w-4" />
-              <span>Generate an image</span>
+              <span>Generate image</span>
             </CommandItem>
           </>
         )}
@@ -153,6 +154,13 @@ const AISelectorCommands = ({
         {/* Options that only show when text is selected */}
         {hasSelection && (
           <>
+            <CommandItem
+              onSelect={() => onSelect("Explain", "explain")}
+              className="flex items-center"
+            >
+              <Plug className="mr-2 h-4 w-4" />
+              <span>Explain</span>
+            </CommandItem>
             <CommandItem
               onSelect={() => onSelect("Improve writing", "improve")}
               className="flex items-center"

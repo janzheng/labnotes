@@ -26,8 +26,8 @@ export const EditorBubble = forwardRef<HTMLDivElement, EditorBubbleProps>(
         const { empty } = selection;
 
         // Check if AI selector is open - if so, don't show bubble menu
-        const aiSelectorOpen = window.localStorage.getItem('novel:ai-selector-open');
-        const suppressBubbleMenu = window.localStorage.getItem('novel:suppress-bubble-menu');
+        const aiSelectorOpen = window.sessionStorage.getItem('novel:ai-selector-open');
+        const suppressBubbleMenu = window.sessionStorage.getItem('novel:suppress-bubble-menu');
         
         if (aiSelectorOpen || suppressBubbleMenu === 'true') {
           return false;

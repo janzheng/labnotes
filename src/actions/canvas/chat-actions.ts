@@ -130,6 +130,7 @@ export const threadgirlAction = defineAction({
           }
         }
       ]
+
     }
 
     let result = await executePipeline(pipeline, {
@@ -137,7 +138,7 @@ export const threadgirlAction = defineAction({
       saveCache: saveCache,
     });
     
-    // console.log('[threadgirlAction] result', result);
+    console.log('[threadgirlAction] result', result);
 
     return {
       prompts: command === "getThreadgirlPrompts" ? result : null,
