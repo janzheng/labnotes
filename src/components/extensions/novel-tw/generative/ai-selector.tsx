@@ -49,46 +49,43 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
   const [isLoadingThreadgirl, setIsLoadingThreadgirl] = useState(false);
   const [lastPrompt, setLastPrompt] = useState("");
   const [showCompletion, setShowCompletion] = useState(true);
-  // Add a dedicated state for Threadgirl results
   const [threadgirlResult, setThreadgirlResult] = useState<string | null>(null);
   const [showThreadgirlResult, setShowThreadgirlResult] = useState(false);
-  // Add a dedicated state to track the current loading operation type
   const [loadingOperation, setLoadingOperation] = useState<string | null>(null);
+  const [scrollAreaMaxHeight, setScrollAreaMaxHeight] = useState<string>("30vh");
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  // Log the opening state for debugging
+  // Add these new state variables for height management
+  const [aiSelectorMaxHeight, setAiSelectorMaxHeight] = useState<string>("70vh");
+  const [commandListMaxHeight, setCommandListMaxHeight] = useState<string>("calc(70vh - 60px)");
+
   useEffect(() => {
     if (open) {
       console.log('[AI-SELECTOR] Opened with fromSlashCommand:', fromSlashCommand, 'isFloating:', isFloating);
     }
   }, [open, fromSlashCommand, isFloating]);
 
-  // Aggressive focus management when selector opens
   useEffect(() => {
     if (!open) return;
 
-    // Immediately try to focus
     const focusInput = () => {
       if (inputRef.current) {
         inputRef.current.focus();
       }
     };
 
-    // Focus immediately
     focusInput();
 
-    // And after a short delay (needed for some browsers/situations)
     const immediateTimeout = setTimeout(focusInput, 10);
     const shortTimeout = setTimeout(focusInput, 50);
     const mediumTimeout = setTimeout(focusInput, 100);
 
-    // Keep checking focus for a period to ensure TipTap doesn't steal it back
     const interval = setInterval(() => {
       if (document.activeElement !== inputRef.current) {
         focusInput();
       }
     }, 50);
 
-    // Stop the interval after giving it enough time to stabilize
     const cleanupTimeout = setTimeout(() => {
       clearInterval(interval);
     }, 500);
@@ -113,7 +110,6 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
       });
 
       if (!response.ok) {
-        // Clone the response before reading it
         const clonedResponse = response.clone();
         const errorText = await clonedResponse.text();
         console.error("AI Response error details:", errorText);
@@ -132,62 +128,49 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
     onFinish: (prompt, result) => {
       console.log("AI Completion finished:", result);
 
-      // Use the actual completion value, not the result parameter
       setMessageHistory(prev => [
         ...prev,
         { role: "assistant", content: result }
       ]);
 
-      // If no specific action was set, set a default one to ensure commands show up
       if (!action) {
         setAction(AI_ACTIONS.DEFAULT_COMPLETION);
       }
 
-      // Switch to completion mode
       setMode(AISelectorMode.COMPLETION);
       
-      // Clear the input field to ensure options show in post-completion menu
       setInputValue("");
     },
   });
 
-  // Track the current action being performed
   const [action, setAction] = useState<string | null>(null);
 
-  // Define what makes a completion visible - update this to be more inclusive
   const hasCompletion = completion.length > 0;
 
   const handleComplete = async () => {
     try {
-      // Get selected text if any - first use passed-in selection if available
       let selectedText = selectionContent;
       
-      // Only query editor for selection if no selection was passed in
       if (!selectedText && editor) {
         const slice = editor.state.selection.content();
         selectedText = editor.storage.markdown.serializer.serialize(slice.content);
       }
 
-      // Prepare the message to send based on selection and input
       let textToSend = '';
       const hasSelection = selectedText.trim().length > 0;
       const hasInput = inputValue.trim().length > 0;
 
       if (hasSelection && hasInput) {
-        // Both selection and input - format with instruction tags
         textToSend = `<instruction>${inputValue.trim()}</instruction>\n\n${selectedText.trim()}`;
       } else if (hasSelection) {
-        // Only selection
         textToSend = selectedText.trim();
       } else if (hasInput) {
-        // Only input
         textToSend = inputValue.trim();
       } else {
         toast.error("Please enter a message or select text");
         return;
       }
 
-      // Add user message to history before sending
       const newUserMessage = { role: "user", content: textToSend };
       setMessageHistory(prev => [...prev, newUserMessage]);
 
@@ -198,13 +181,10 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
         messageHistory: [...messageHistory, newUserMessage]
       });
 
-      // Save the prompt before sending
       setLastPrompt(inputValue);
 
-      // Set a default action to ensure completion commands show up
       setAction(AI_ACTIONS.DEFAULT_COMPLETION);
 
-      // Send the complete message history to maintain context
       await complete(textToSend, {
         body: {
           prompt: textToSend,
@@ -220,20 +200,16 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
     }
   };
 
-  // Add a debug button to check the message history
-  // We can remove this later once everything is working
   const debugMessageHistory = () => {
     console.log("Current message history:", messageHistory);
     console.log("Current completion:", completion);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    // Restore and improve this block to auto-insert on empty Enter when in completion mode
     if (e.key === 'Enter' && !inputValue.trim() && 
         ((hasCompletion && mode === AISelectorMode.COMPLETION) || 
          (showThreadgirlResult && threadgirlResult && mode === AISelectorMode.COMPLETION))) {
       e.preventDefault();
-      // Call insertBelow function directly
       if (editor) {
         const selection = editor.view.state.selection;
         editor
@@ -242,56 +218,40 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
           .insertContentAt(selection.to + 1, showThreadgirlResult && threadgirlResult ? threadgirlResult : completion)
           .run();
         
-        // Close the AI selector completely
         onOpenChange(false);
       }
       return;
     }
     
-    // Handle Enter keypress based on current mode
     if (e.key === 'Enter') {
-      // Check if there's a selected item in the command menu
       const selectedElement = commandRef.current?.querySelector('[data-selected="true"]') as HTMLElement;
       
-      // If there's a selected item, let Command handle it without preventDefault
       if (selectedElement) {
-        // Let the Command component handle the selection
         return;
       }
       
-      // No menu item is selected, so handle the Enter keypress ourselves
       e.preventDefault();
       
-      // Route the Enter keypress to the appropriate handler based on mode
       if (mode === AISelectorMode.IMAGE_GENERATION) {
-        // For image generation, handle generation in the ImageGeneratorMenu component
-        // This will be triggered through a callback
         return;
       } else if (mode === AISelectorMode.THREADGIRL) {
-        // For threadgirl, handle in the ThreadgirlMenu component
-        // This will be triggered through a callback
         return;
       } else if (inputValue.trim()) {
-        // For the default mode with input, run the standard prompt
         handleComplete();
       }
     }
 
-    // Discard completion or close the modal when backspace is pressed on empty input
     if (e.key === 'Backspace' && !inputValue) {
       e.preventDefault();
       
       if (mode === AISelectorMode.THREADGIRL) {
-        // If in Threadgirl submenu, go back to main menu instead of closing
         console.log('[AI-SELECTOR] Going back to main menu from Threadgirl submenu');
         setMode(AISelectorMode.DEFAULT);
       } else if (hasCompletion || (showThreadgirlResult && threadgirlResult)) {
         console.log('[AI-SELECTOR] Discarding completion or threadgirl result on empty backspace');
-        // Discard the completion and clean up
         if (editor) {
           editor.chain().unsetHighlight().focus().run();
         }
-        // Reset the message history or handle any other cleanup
         setMessageHistory([]);
         setShowCompletion(false);
         setShowThreadgirlResult(false);
@@ -304,7 +264,6 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
     }
   };
 
-  // Handle command selection including the new image generation option
   const handleCommandSelect = async (value: string, option: string, promptName?: string) => {
     console.log(`[AI-SELECTOR] handleCommandSelect called with option: ${option}`);
     
@@ -315,53 +274,40 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
       console.log("[AI-SELECTOR] Switching to THREADGIRL mode");
       setMode(AISelectorMode.THREADGIRL);
       setInputValue("");
-      // Reset threadgirl result when switching to prompt selection
       setThreadgirlResult(null);
       setShowThreadgirlResult(false);
     } else if (option === "threadgirl") {
       console.log("[AI-SELECTOR] Processing Threadgirl result:", value.substring(0, 50) + "...");
       console.log(`[AI-SELECTOR] Current isLoadingThreadgirl state: ${isLoadingThreadgirl}`);
       
-      // Add user message to history
       const newUserMessage = { role: "user", content: value };
       setMessageHistory(prev => [...prev, newUserMessage]);
       
-      // Add the result to message history
       setMessageHistory(prev => [
         ...prev,
         { role: "assistant", content: value }
       ]);
       
-      // Store the result in the dedicated Threadgirl state
       setThreadgirlResult(value);
       setShowThreadgirlResult(true);
       
-      // Switch to completion view mode
       setMode(AISelectorMode.COMPLETION);
       
       console.log("[AI-SELECTOR] Using Threadgirl result directly");
       
-      // Clear input
       setInputValue("");
       
-      // Set the lastPrompt for persistence
       setLastPrompt(promptName || "Threadgirl");
       
-      // Important: Reset the loading state here after we've processed the result
       console.log("[AI-SELECTOR] Setting isLoadingThreadgirl to FALSE");
       setIsLoadingThreadgirl(false);
-      // Also reset the loading operation
       console.log("[AI-SELECTOR] Clearing loadingOperation state");
       setLoadingOperation(null);
     } else if (option === "set_input") {
-      // Just set the input value
       setInputValue(value);
     } else if (hasSelection(editor) && ["explain", "improve", "fix", "shorten", "lengthen", "professional", "casual", "simplify"].includes(option)) {
-      // For selection-based options, automatically submit with the selected text
-      // First use passed-in selection if available
       let selectedText = selectionContent;
       
-      // Only query editor for selection if no selection was passed in
       if (!selectedText && editor) {
         const slice = editor.state.selection.content();
         selectedText = editor.storage.markdown.serializer.serialize(slice.content);
@@ -372,14 +318,11 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
         return;
       }
 
-      // Format the prompt with instruction and selected text
       const formattedPrompt = `<instruction>${value}</instruction>\n\n${selectedText.trim()}`;
 
-      // Add user message to history
       const newUserMessage = { role: "user", content: formattedPrompt };
       setMessageHistory(prev => [...prev, newUserMessage]);
 
-      // Set the current action
       setAction(AI_ACTIONS.TRANSFORM_SELECTION);
 
       console.log("Auto-submitting selection with command:", {
@@ -390,10 +333,9 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
         action: AI_ACTIONS.TRANSFORM_SELECTION
       });
 
-      // Send to AI - use the formattedPrompt as the main prompt
       complete(formattedPrompt, {
         body: {
-          prompt: selectedText,  // Original text for reference
+          prompt: selectedText,
           option: option,
           command: value,
           action: AI_ACTIONS.TRANSFORM_SELECTION,
@@ -401,14 +343,12 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
         },
       });
 
-      // Don't close the selector immediately - wait for completion
     } else {
       setAction(null);
       complete(value, { body: { option } });
     }
   };
 
-  // Helper function to check if there's a selection
   const hasSelection = (editor: any) => {
     if (selectionContent && selectionContent.trim().length > 0) return true;
     if (!editor) return false;
@@ -416,13 +356,11 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
     return selection.from !== selection.to;
   };
 
-  // We'll keep replaceSelection for the transform_selection action only
   const replaceSelection = () => {
     if (!editor) return;
 
     const { from, to } = editor.state.selection;
 
-    // Replace the selected text with the completion
     editor.chain()
       .focus()
       .insertContentAt(
@@ -434,73 +372,138 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
       )
       .run();
 
-    // Close the selector after replacing
     onOpenChange(false);
   };
 
-  // Add a useEffect to handle the ignore_completion action
   useEffect(() => {
     if (action === AI_ACTIONS.IGNORE_COMPLETION) {
-      // Reset the action
       setAction(null);
-      
-      // The UI will now show the command menu instead of the completion
-      // because we're conditionally rendering based on hasCompletion
-      // but we've applied a hack to ignore it
     }
   }, [action]);
 
-  // Ensure the action is maintained throughout the completion process
   useEffect(() => {
-    // When loading starts, make sure we have an action set
     if (isLoading && !action) {
       setAction(AI_ACTIONS.DEFAULT_COMPLETION);
     }
     
-    // When loading finishes and we have a completion but no specific action
     if (!isLoading && completion.length > 0 && !action) {
       setAction(AI_ACTIONS.DEFAULT_COMPLETION);
     }
   }, [isLoading, completion, action]);
 
   useEffect(() => {
-    // When loading finishes and we have a completion, show it
     if (!isLoading && completion.length > 0) {
       setShowCompletion(true);
       setMode(AISelectorMode.COMPLETION);
       
-      // Clear the input field when showing completion
       setInputValue("");
     }
   }, [isLoading, completion]);
 
-  // Handle the transform_selection action when loading completes
   useEffect(() => {
     if (!isLoading && action === AI_ACTIONS.TRANSFORM_SELECTION && completion) {
       replaceSelection();
     }
   }, [isLoading, action, completion]);
 
-  // Add a useEffect to debug loading state changes
   useEffect(() => {
     console.log(`[AI-SELECTOR] isLoadingThreadgirl changed to: ${isLoadingThreadgirl}`);
   }, [isLoadingThreadgirl]);
 
-  // Add a useEffect to debug loadingOperation changes
   useEffect(() => {
     console.log(`[AI-SELECTOR] loadingOperation changed to: ${loadingOperation}`);
   }, [loadingOperation]);
 
+  // Calculate appropriate heights when component mounts or position changes
+  useEffect(() => {
+    if (!open) return;
+    
+    const calculateOptimalHeights = () => {
+      // Get viewport dimensions
+      const viewportHeight = window.innerHeight;
+      const viewportWidth = window.innerWidth;
+      
+      // Default padding to give some space at viewport edges
+      const edgePadding = 40;
+      
+      // Get AI selector position if available
+      let positionInfo = {
+        top: 0,
+        bottom: viewportHeight,
+        height: 0
+      };
+      
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        positionInfo = {
+          top: rect.top,
+          bottom: rect.bottom,
+          height: rect.height
+        };
+      }
+      
+      // Calculate available space above and below
+      const spaceAbove = Math.max(0, positionInfo.top - edgePadding);
+      const spaceBelow = Math.max(0, viewportHeight - positionInfo.top - edgePadding);
+      
+      // Determine if we have more space above or below
+      const moreSpaceBelow = spaceBelow >= spaceAbove;
+      
+      // Calculate max heights based on available space
+      // Use the larger area (above or below) for positioning
+      const availableSpace = Math.max(spaceAbove, spaceBelow);
+      
+      // Apply constraints to avoid too large or too small selector
+      let maxHeight = Math.min(
+        Math.max(availableSpace, 250), // Minimum usable height
+        viewportHeight * 0.7           // Maximum fraction of viewport
+      );
+      
+      // Reserve space for command input (approximately 60px)
+      const commandInputHeight = 60;
+      const commandListHeight = maxHeight - commandInputHeight;
+      
+      // Reserve additional space for command items, loading indicators, etc.
+      // Scroll areas should take up most of the remaining space but leave room for other UI
+      const uiElementsHeight = 120; // Approximate height of other UI elements
+      const scrollAreaHeight = commandListHeight - uiElementsHeight;
+      
+      // Update state with calculated heights
+      setAiSelectorMaxHeight(`${maxHeight}px`);
+      setCommandListMaxHeight(`${commandListHeight}px`);
+      setScrollAreaMaxHeight(`${Math.max(scrollAreaHeight, 100)}px`); // Ensure minimum scrollable height
+      
+      console.log('AI Selector heights calculated:', {
+        total: `${maxHeight}px`,
+        commandList: `${commandListHeight}px`,
+        scrollArea: `${scrollAreaHeight}px`
+      });
+    };
+    
+    // Calculate on mount and when window is resized
+    calculateOptimalHeights();
+    window.addEventListener('resize', calculateOptimalHeights);
+    
+    return () => window.removeEventListener('resize', calculateOptimalHeights);
+  }, [open, isFloating]);
+
   return (
     <Command
-      ref={commandRef}
+      ref={(el) => {
+        if (typeof commandRef === 'function') {
+          commandRef(el);
+        } else if (commandRef) {
+          commandRef.current = el;
+        }
+        containerRef.current = el;
+      }}
       className={`w-[350px] ai-selector ${isFloating ? 'in-floating-container' : ''}`}
+      style={{ maxHeight: aiSelectorMaxHeight }}
     >
-      <CommandList>
-        {/* Threadgirl result view */}
+      <CommandList style={{ maxHeight: commandListMaxHeight, overflow: 'auto' }}>
         {showThreadgirlResult && threadgirlResult && mode === AISelectorMode.COMPLETION && (
-          <div className="flex max-h-[900px]">
-            <ScrollArea>
+          <div className="flex">
+            <ScrollArea className="w-full" maxHeight={scrollAreaMaxHeight}>
               <div className="prose p-2 px-4 prose-sm">
                 <Markdown>{threadgirlResult}</Markdown>
               </div>
@@ -508,10 +511,9 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
           </div>
         )}
         
-        {/* Standard Completion view - only show if not showing Threadgirl results */}
         {hasCompletion && showCompletion && mode === AISelectorMode.COMPLETION && !showThreadgirlResult && (
-          <div className="flex max-h-[900px]">
-            <ScrollArea>
+          <div className="flex">
+            <ScrollArea className="w-full" maxHeight={scrollAreaMaxHeight}>
               <div className="prose p-2 px-4 prose-sm">
                 <Markdown>{completion}</Markdown>
               </div>
@@ -519,7 +521,6 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
           </div>
         )}
 
-        {/* Debug button - can be removed after debugging */}
         <button
           onClick={debugMessageHistory}
           className="hidden text-xs text-gray-500 hover:text-gray-700"
@@ -527,7 +528,6 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
           Debug History
         </button>
 
-        {/* Loading indicator */}
         {(isLoading || isGeneratingImage || isLoadingThreadgirl) && (
           <div className={`flex w-full items-center px-4 text-sm font-medium ${
             isLoadingThreadgirl 
@@ -552,7 +552,6 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
 
         {!isLoading && !isGeneratingImage && !isLoadingThreadgirl && (
           <>
-            {/* Input field - always shown except in some specific modes */}
             <div className="relative">
               <CommandInput
                 ref={inputRef}
@@ -573,17 +572,14 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
                           : "Ask AI anything..."
                 }
                 onFocus={() => {
-                  // Only add AI highlight for direct AI button clicks, not slash or space commands
                   if (!fromSlashCommand && !isFloating && mode === AISelectorMode.DEFAULT) {
                     addAIHighlight(editor);
                   }
                 }}
                 onClick={(e: React.MouseEvent) => {
-                  // Prevent event from bubbling up to TipTap
                   e.preventDefault();
                   e.stopPropagation();
                   
-                  // Force focus on input
                   if (inputRef.current) {
                     inputRef.current.focus();
                   }
@@ -595,9 +591,9 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
                 className="absolute right-2 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-purple-500 hover:bg-purple-900"
                 onClick={
                   mode === AISelectorMode.IMAGE_GENERATION 
-                    ? () => {} // Handled by ImageGeneratorMenu
+                    ? () => {}
                     : mode === AISelectorMode.THREADGIRL 
-                      ? () => {} // Handled by ThreadgirlMenu
+                      ? () => {}
                       : handleComplete
                 }
               >
@@ -605,7 +601,6 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
               </Button>
             </div>
             
-            {/* Different menu views based on mode */}
             {mode === AISelectorMode.IMAGE_GENERATION ? (
               <ImageGeneratorMenu
                 onSelect={handleCommandSelect}
@@ -617,38 +612,34 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
                 generatedImageUrl={generatedImageUrl}
               />
             ) : mode === AISelectorMode.THREADGIRL ? (
-              <ThreadgirlMenu
-                onSelect={handleCommandSelect}
-                onBack={() => setMode(AISelectorMode.DEFAULT)}
-                selectionContent={selectionContent}
-                inputValue={inputValue}
-                editor={editor}
-                isLoadingThreadgirl={isLoadingThreadgirl}
-                setIsLoadingThreadgirl={setIsLoadingThreadgirl}
-                loadingOperation={loadingOperation}
-                setLoadingOperation={setLoadingOperation}
-              />
+              <div style={{ maxHeight: commandListMaxHeight, overflow: 'auto' }}>
+                <ThreadgirlMenu
+                  onSelect={handleCommandSelect}
+                  onBack={() => setMode(AISelectorMode.DEFAULT)}
+                  selectionContent={selectionContent}
+                  inputValue={inputValue}
+                  editor={editor}
+                  isLoadingThreadgirl={isLoadingThreadgirl}
+                  setIsLoadingThreadgirl={setIsLoadingThreadgirl}
+                  loadingOperation={loadingOperation}
+                  setLoadingOperation={setLoadingOperation}
+                />
+              </div>
             ) : ((hasCompletion && showCompletion) || (showThreadgirlResult && threadgirlResult)) && mode === AISelectorMode.COMPLETION ? (
-              // Show post-completion commands for both regular completions and threadgirl results
               <AIPostCompletionCommands
                 onDiscard={() => {
-                  // Reset states but keep the selector open to show the AI menu
                   if (editor) {
                     editor.chain().unsetHighlight().focus().run();
                   }
                   
-                  // Restore the last prompt to the input
                   setInputValue(lastPrompt);
                   
-                  // Explicitly hide the completion UI
                   setShowCompletion(false);
                   setShowThreadgirlResult(false);
                   
-                  // Reset to default mode
                   setMode(AISelectorMode.DEFAULT);
                 }}
                 onClose={() => {
-                  // Completely close the selector
                   if (editor) {
                     editor.chain().unsetHighlight().focus().run();
                   }
@@ -659,7 +650,6 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
                 originalPrompt={lastPrompt}
               />
             ) : (
-              // Default AI selector commands
               <AISelectorCommands
                 onSelect={handleCommandSelect}
                 hasSelection={Boolean(editor?.state.selection.content().size > 0 || selectionContent?.trim().length > 0)}

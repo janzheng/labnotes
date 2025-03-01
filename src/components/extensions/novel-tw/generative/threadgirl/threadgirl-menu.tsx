@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import CrazySpinner from "@/components/ui/icons/crazy-spinner";
 import { actions } from 'astro:actions';
 import { toast } from "sonner";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Define a type for threadgirl prompts
 interface ThreadgirlPrompt {
@@ -240,7 +241,7 @@ const ThreadgirlMenu: React.FC<ThreadgirlMenuProps> = ({
   };
 
   return (
-    <div className="">
+    <div className="threadgirl-menu">
       <CommandGroup>
         <CommandItem
           onSelect={onBack}
@@ -260,34 +261,36 @@ const ThreadgirlMenu: React.FC<ThreadgirlMenuProps> = ({
         </div>
       ) : threadgirlPrompts && threadgirlPrompts.length > 0 ? (
         <CommandGroup heading="Available Prompts">
-          {threadgirlPrompts.map((prompt) => (
-            <CommandItem
-              key={`threadgirl-prompt-${prompt._id || prompt.name}`}
-              onSelect={() => {
-                // Get selected text - first try using passed-in selection
-                let selectedText = selectionContent.trim();
-                
-                // Only fall back to editor selection if no passed-in selection
-                if (!selectedText && editor) {
-                  // Get plain text directly from the selection
-                  const { from, to } = editor.state.selection;
-                  selectedText = editor.state.doc.textBetween(from, to, ' ').trim();
-                }
-                
-                // If there's selected text, use it instead of the placeholder
-                if (selectedText) {
-                  // Run the prompt with the selected text
-                  handleRunThreadgirlPrompt(prompt.name);
-                } else {
-                  // No selection, use the placeholder as before
-                  onSelect(`{${prompt.name}} [add your text or link]`, "set_input");
-                }
-              }}
-              className="flex items-center"
-            >
-              <span>{prompt.name}</span>
-            </CommandItem>
-          ))}
+          <div className="threadgirl-prompts-container">
+            {threadgirlPrompts.map((prompt) => (
+              <CommandItem
+                key={`threadgirl-prompt-${prompt._id || prompt.name}`}
+                onSelect={() => {
+                  // Get selected text - first try using passed-in selection
+                  let selectedText = selectionContent.trim();
+                  
+                  // Only fall back to editor selection if no passed-in selection
+                  if (!selectedText && editor) {
+                    // Get plain text directly from the selection
+                    const { from, to } = editor.state.selection;
+                    selectedText = editor.state.doc.textBetween(from, to, ' ').trim();
+                  }
+                  
+                  // If there's selected text, use it instead of the placeholder
+                  if (selectedText) {
+                    // Run the prompt with the selected text
+                    handleRunThreadgirlPrompt(prompt.name);
+                  } else {
+                    // No selection, use the placeholder as before
+                    onSelect(`{${prompt.name}} [add your text or link]`, "set_input");
+                  }
+                }}
+                className="flex items-center"
+              >
+                <span>{prompt.name}</span>
+              </CommandItem>
+            ))}
+          </div>
         </CommandGroup>
       ) : (
         <div className="p-4 text-center text-sm text-muted-foreground">
@@ -318,14 +321,6 @@ const ThreadgirlMenu: React.FC<ThreadgirlMenuProps> = ({
         </div>
       )}
       
-      {/* Debug button - only shown in development */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="px-4 py-2 text-xs text-gray-400 border-t mt-2 flex justify-between">
-          <div className="text-xs">
-            Loading: {isLoadingThreadgirl ? 'TRUE' : 'FALSE'}
-          </div>
-        </div>
-      )}
     </div>
   );
 };

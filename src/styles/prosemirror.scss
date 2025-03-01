@@ -477,7 +477,7 @@ mark[style] > strong {
   background-color: red !important;
 }
 
-/* Drop cursor styling - add this section */
+/* For Notebook drag and drop */
 .ProseMirror-dropcursor {
   position: absolute;
   border-top: 3px solid #68cef8;
@@ -485,4 +485,61 @@ mark[style] > strong {
   pointer-events: none;
   margin-top: -1px;
   animation: dropCursorBlink 1.2s ease-in-out infinite;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* AI Selector Responsive Height Management */
+.ai-selector {
+  overflow: hidden;
+  /* Ensure overflow control happens inside */
+}
+
+/* Ensure command list can scroll properly */
+.ai-selector [data-slot="command-list"] {
+  overflow-y: auto;
+  /* Always allow vertical scrolling */
+}
+
+/* Specifically style the Threadgirl menu to allow proper scrolling */
+.threadgirl-menu {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Ensure the prompts container can scroll when there are many items */
+.threadgirl-prompts-container {
+  max-height: 40vh;
+  /* This will be constrained by parent element's height */
+  overflow-y: auto;
+}
+
+/* Add better scrollbar styling for WebKit browsers */
+.threadgirl-prompts-container::-webkit-scrollbar {
+  width: 6px;
+}
+
+.threadgirl-prompts-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.threadgirl-prompts-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
 }

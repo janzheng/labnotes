@@ -246,10 +246,14 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
     }
     
     // Only create a new Tippy instance if we're showing the floating selector and have valid coordinates
-    if (showFloatingSelector && currentCoords && floatingContentRef.current) {
+    if (showFloatingSelector && currentCoords) {
       // Create a DOM element to attach Tippy to
       const virtualEl = document.createElement('div');
       document.body.appendChild(virtualEl);
+      
+      // Create an element for the content
+      const contentEl = document.createElement('div');
+      contentEl.className = 'ai-selector-tippy-content max-w-[350px] border border-muted bg-background shadow-xl rounded-md';
       
       // Create new Tippy instance with the proper virtual positioning approach
       const instance = tippy(virtualEl, {
@@ -263,7 +267,7 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
           x: currentCoords.left,
           y: currentCoords.top
         }),
-        content: floatingContentRef.current,
+        content: contentEl,
         placement: 'bottom-start',
         appendTo: document.body,
         interactive: true,
@@ -274,6 +278,8 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
         duration: 100,
         hideOnClick: false,
         theme: 'light',
+        allowHTML: true,
+        zIndex: 9999,
         popperOptions: {
           strategy: 'fixed',
           modifiers: [
@@ -297,6 +303,9 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
       // Show the tooltip
       instance.show();
       setFloatingTippyInstance(instance);
+      
+      // Instead of using Tippy to mount our React component, we'll use React's createPortal
+      // to render directly into the Tippy content element
       
       return () => {
         // Clean up Tippy instance and DOM element
@@ -477,6 +486,7 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
             {/* {console.log("[GENERATIVE-MENU-SWITCH] Rendering AI Selector in bubble menu")} */}
             <AISelector 
               open={open} 
+              isFloating={true}
               onOpenChange={onOpenChange} 
               fromSlashCommand={fromSlashCommand}
               selectionContent={selectedContent} 
@@ -547,20 +557,17 @@ const GenerativeMenuSwitch = ({ children, open, onOpenChange }: GenerativeMenuSw
         )}
       </EditorBubble>
 
-      {/* Floating AI Selector Content (hidden until shown by Tippy) */}
-      <div style={{ display: 'none' }}>
-        <div ref={floatingContentRef} className="rounded-md border border-muted bg-background shadow-xl" style={{ width: '350px' }}>
-          {showFloatingSelector && (
-            <AISelector 
-              open={true} 
-              onOpenChange={handleCloseFloatingSelector} 
-              fromSlashCommand={triggerSource === 'slash-command'}
-              isFloating={true}
-              selectionContent={selectedContent}
-            />
-          )}
-        </div>
-      </div>
+      {/* Use React createPortal to render the AI Selector directly into the DOM */}
+      {showFloatingSelector && floatingTippyInstance && createPortal(
+        <AISelector 
+          open={true} 
+          onOpenChange={handleCloseFloatingSelector} 
+          fromSlashCommand={triggerSource === 'slash-command'}
+          isFloating={true}
+          selectionContent={selectedContent}
+        />,
+        document.querySelector('.ai-selector-tippy-content') || document.body
+      )}
     </>
   );
 };
