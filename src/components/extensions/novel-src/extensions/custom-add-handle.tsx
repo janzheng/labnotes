@@ -281,6 +281,7 @@ function AddLinePlugin(options) {
           if (!view.editable) {
             return;
           }
+          
 
           // Skip processing if we're over the handle itself or if dragging
           if (isOverHandle || event.target === plusHandleElement || isDragging) {

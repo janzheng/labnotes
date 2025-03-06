@@ -52,13 +52,30 @@ export const suggestionItems = createSuggestionItems([
     description: "Create a collapsible toggle block",
     icon: <ChevronRight className="w-4 h-4" />,
     command: ({ editor, range }) => {
-      editor
-        .chain()
+      // Delete the slash command text
+      editor.chain().focus().deleteRange(range).run()
+
+      // Create a toggle block with a title attribute
+      editor.chain()
         .focus()
-        .deleteRange(range)
-        .setToggleBlock()
-        .run();
-    }
+        .insertContent({
+          type: 'toggleBlock',
+          attrs: { title: 'Toggle', open: true },
+          content: [
+            { type: 'paragraph' },
+            { type: 'paragraph' },
+            { type: 'paragraph' }
+          ]
+        })
+        .run()
+
+      // Set cursor to the first paragraph inside the toggle
+      setTimeout(() => {
+        const pos = range.from + 1
+        editor.commands.setTextSelection(pos)
+        editor.commands.focus()
+      }, 10)
+    },
   },
   // {
   //   title: "Send Feedback",

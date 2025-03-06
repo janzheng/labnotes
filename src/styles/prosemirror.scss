@@ -479,7 +479,6 @@ mark[style] > strong {
 .drag-handle-hit-area {
   pointer-events: auto; /* Captures mouse events */
   cursor: default; /* Default cursor to not confuse users */
-  background-color: red !important;
 }
 
 /* For Notebook drag and drop */
@@ -547,4 +546,21 @@ mark[style] > strong {
 .threadgirl-prompts-container::-webkit-scrollbar-thumb {
   background-color: rgba(0, 0, 0, 0.2);
   border-radius: 3px;
+}
+
+
+
+/* 
+
+  Toggle block classes
+
+*/
+/* Hides placeholder from parent toggle class */
+.node-toggleBlock.is-empty[data-placeholder]:before {
+  display: none;
+}
+/* Hide any AI placeholders that might appear in toggle titles */
+.toggle-title .ai-placeholder,
+.toggle-summary .ai-placeholder {
+  display: none !important;
 }

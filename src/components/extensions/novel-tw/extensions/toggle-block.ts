@@ -10,9 +10,9 @@ declare module '@tiptap/core' {
   interface Commands<ReturnType> {
     toggleBlock: {
       /**
-       * Create a toggle block
+       * Create a toggle block with empty content
        */
-      setToggleBlock: () => ReturnType
+      setToggleBlock: (title?: string) => ReturnType
       /**
        * Convert current block to toggle block
        */
@@ -26,8 +26,34 @@ export const ToggleBlock = Node.create<ToggleBlockOptions>({
   
   group: 'block',
   
+  // Define attributes for the toggle block
+  addAttributes() {
+    return {
+      // Store the toggle title as an attribute
+      title: {
+        default: 'Toggle',
+        parseHTML: element => element.getAttribute('data-title') || 'Toggle',
+        renderHTML: attributes => {
+          return {
+            'data-title': attributes.title,
+          }
+        },
+      },
+      // Track open/closed state
+      open: {
+        default: true,
+        parseHTML: element => element.getAttribute('data-open') === 'true',
+        renderHTML: attributes => {
+          return {
+            'data-open': attributes.open.toString(),
+          }
+        },
+      }
+    }
+  },
+  
   // Allow any block content inside the toggle
-  content: 'block+',
+  content: 'block*',
   
   defining: true,
   
@@ -63,15 +89,41 @@ export const ToggleBlock = Node.create<ToggleBlockOptions>({
   
   addCommands() {
     return {
-      setToggleBlock: () => ({ commands, state }) => {
+      setToggleBlock: (title = 'Toggle') => ({ commands, chain, state }) => {
         // Get the current node
         const { $from, $to } = state.selection
         const range = $from.blockRange($to)
         
         if (!range) return false
         
-        // Create a toggle block with the current block as summary
-        return commands.wrapIn(this.name)
+        // Get the content of the current block to use as title if available
+        const currentNodeText = $from.parent.textContent
+        const toggleTitle = currentNodeText || title
+        
+        // Delete the current block
+        const success = chain()
+          .deleteRange({ from: range.start, to: range.end })
+          // Insert a toggle block with the title as an attribute
+          .insertContent({
+            type: 'toggleBlock',
+            attrs: { title: toggleTitle, open: true },
+            content: [
+              { type: 'paragraph' },
+              { type: 'paragraph' },
+              { type: 'paragraph' }
+            ]
+          })
+          .run()
+        
+        // Focus inside the toggle
+        if (success) {
+          setTimeout(() => {
+            const pos = state.selection.$from.pos + 1
+            chain().setTextSelection(pos).focus().run()
+          }, 10)
+        }
+        
+        return success
       },
       
       toggleToggleBlock: () => ({ commands, state }) => {
@@ -83,9 +135,11 @@ export const ToggleBlock = Node.create<ToggleBlockOptions>({
         const isInToggleBlock = this.isActive(state)
         
         if (isInToggleBlock) {
+          // Lift the content out of the toggle block
           return commands.lift(this.name)
         }
         
+        // Convert to toggle block
         return commands.setToggleBlock()
       },
     }

@@ -282,6 +282,16 @@ function DragHandlePlugin(options) {
                 window.setTimeout(() => hideCommands(), 50);
             };
             
+            // Handle backspace key in empty input to delete the block
+            const handleKeyDown = (e) => {
+              console.log('handleKeyDown', e.key, inputValue);  
+                if (e.key === 'Backspace' && inputValue === '') {
+                    logDebug('Backspace pressed in empty input, triggering delete');
+                    e.preventDefault();
+                    executeCommand('delete');
+                }
+            };
+            
             // Helper function for view-based command handling
             const handleCommandWithView = (command, view, pos) => {
                 if (!view || pos === null) return;
@@ -322,6 +332,7 @@ function DragHandlePlugin(options) {
                         placeholder="Command..."
                         value={inputValue}
                         onValueChange={setInputValue}
+                        onKeyDown={handleKeyDown}
                         autoFocus
                         className="w-full bg-transparent border-none focus:ring-0 focus:outline-none"
                     />
@@ -599,6 +610,7 @@ function DragHandlePlugin(options) {
                     if (!view.editable) {
                         return;
                     }
+                    
                     
                     // Check if mouse is over plus handle - don't hide drag handle in this case
                     const isPlusHandle = event.target?.classList.contains('plus-handle') || 

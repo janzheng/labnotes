@@ -44,6 +44,7 @@ import { removeAIHighlight } from "./generative/ai-highlight";
 
 import ToggleBlock from "./extensions/toggle-block";
 import ToggleInputRule from "./extensions/toggle-input-rule";
+import QuoteInputRule from "./extensions/quote-input-rule";
 
 // Debug logger
 function logDebug(...args) {
@@ -143,7 +144,8 @@ const extensions = [
   FootnoteReference, 
   Footnote,
   ToggleBlock,
-  ToggleInputRule
+  ToggleInputRule,
+  QuoteInputRule
 ];
 
 // Update the props interface
