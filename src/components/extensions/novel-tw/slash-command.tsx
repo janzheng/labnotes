@@ -55,15 +55,13 @@ export const suggestionItems = createSuggestionItems([
       // Delete the slash command text
       editor.chain().focus().deleteRange(range).run()
 
-      // Create a toggle block with a title attribute
+      // Create a toggle block with a title
       editor.chain()
         .focus()
         .insertContent({
           type: 'toggleBlock',
           attrs: { title: 'Toggle', open: true },
           content: [
-            { type: 'paragraph' },
-            { type: 'paragraph' },
             { type: 'paragraph' }
           ]
         })
@@ -71,7 +69,8 @@ export const suggestionItems = createSuggestionItems([
 
       // Set cursor to the first paragraph inside the toggle
       setTimeout(() => {
-        const pos = range.from + 1
+        // Find the toggle block
+        const pos = range.from + 1  // Position of first paragraph
         editor.commands.setTextSelection(pos)
         editor.commands.focus()
       }, 10)

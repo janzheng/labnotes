@@ -26,6 +26,19 @@
     display: none;
   }
 }
+p.is-empty+div.node-toggleBlock:before {
+  content: none !important;
+}
+
+/* Also hide placeholder when the paragraph is right before a toggle-block */
+p[data-placeholder].is-empty:has(+ div.node-toggleBlock)::before {
+  display: none !important;
+}
+
+/* Alternative selector for browsers that don't support :has */
+div.node-toggleBlock~p[data-placeholder].is-empty:empty::before {
+  display: none !important;
+}
 
 
 .ProseMirror ul.is-empty:not(.list-disc) {
@@ -564,55 +577,54 @@ mark[style] > strong {
   Toggle block classes
 
 */
-/* Hides placeholder from parent toggle class */
+/* Hides placeholder from parent toggle class when no content in the Toggle */
 .node-toggleBlock.is-empty[data-placeholder]:before {
   display: none;
 }
-/* Hide any AI placeholders that might appear in toggle titles */
-.toggle-title .ai-placeholder,
-.toggle-summary .ai-placeholder {
-  display: none !important;
-}
 
-/* Style the toggle content to appear connected to its header */
-.toggle-content-wrapper {
-  margin-top: -0.5rem;
-  /* Reduce space between header and content */
+/* Empty toggle content placeholder - handle both truly empty and ProseMirror empty cases */
+.toggle-content-editable.novel-toggle-content p:first-child {
   position: relative;
+  border-bottom: 1px solid var(--border);
+  margin-top: 0.5px;
+  margin-bottom: 0.5rem;
 }
 
-/* Add a visual connection between toggle header and content */
-.toggle-content-wrapper::before {
-  content: '';
+/* Target both empty paragraphs and those with only a trailing break */
+.toggle-content-editable.novel-toggle-content p:first-child.is-empty:before,
+.toggle-content-editable.novel-toggle-content p:first-child:has(br.ProseMirror-trailingBreak):not(:has(* + br.ProseMirror-trailingBreak)):before {
+  content: "Add a toggle title...";
+  color: var(--color-muted-foreground-light);
   position: absolute;
-  top: -0.5rem;
-  left: -0.25rem;
-  width: 0.5rem;
-  height: 0.5rem;
-  border-left: 1px solid rgba(0, 0, 0, 0.1);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-/* Dark mode support */
-.dark .toggle-content-wrapper::before {
-  border-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Style for the spacers */
-.toggle-block-spacer {
   pointer-events: none;
-  position: relative;
 }
 
-/* Create an invisible shield over the toggle header when hovering content */
-.toggle-content-wrapper:hover::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 100px;
-  /* Adjust based on your layout */
+/* For browsers that don't support :has */
+.toggle-content-editable.novel-toggle-content p:first-child:empty:before {
+  content: "Add content...";
+  color: var(--color-muted-foreground-light);
+  font-style: italic;
+  position: absolute;
   pointer-events: none;
-  z-index: 1000;
+}
+
+/* Toggle title styling */
+.novel-toggle-content p.toggle-title {
+  border-bottom: 1px solid var(--border);
+  margin-top: 0.5px;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+/* Empty toggle title placeholder */
+.novel-toggle-content p.toggle-title.is-empty:before {
+  content: "Add a title...";
+  color: var(--color-muted-foreground-light);
+  font-weight: normal;
+  font-style: italic;
+}
+
+/* Style for the toggle content area */
+.novel-toggle-content p:not(.toggle-title):first-of-type {
+  margin-top: 0.5rem;
 }

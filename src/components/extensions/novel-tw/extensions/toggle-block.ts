@@ -12,18 +12,21 @@ declare module '@tiptap/core' {
       /**
        * Create a toggle block with empty content
        */
-      setToggleBlock: (title?: string) => ReturnType
+      setToggleBlock: (title?: string, fromShortcut?: boolean) => ReturnType
       /**
        * Convert current block to toggle block
        */
       toggleToggleBlock: () => ReturnType
+      /**
+       * Toggle the open/closed state of a toggle block
+       */
+      toggleOpenState: () => ReturnType
     }
   }
 }
 
 export const ToggleBlock = Node.create<ToggleBlockOptions>({
   name: 'toggleBlock',
-  
   group: 'block',
   
   // Define attributes for the toggle block
@@ -35,7 +38,7 @@ export const ToggleBlock = Node.create<ToggleBlockOptions>({
         parseHTML: element => element.getAttribute('data-title') || 'Toggle',
         renderHTML: attributes => {
           return {
-            'data-title': attributes.title,
+            'data-title': attributes.title || 'Toggle',
           }
         },
       },
@@ -63,7 +66,7 @@ export const ToggleBlock = Node.create<ToggleBlockOptions>({
   },
   
   // Allow any block content inside the toggle
-  content: 'block*',
+  content: 'block+',  // Require at least one block for the summary
   
   defining: true,
   
@@ -73,10 +76,26 @@ export const ToggleBlock = Node.create<ToggleBlockOptions>({
   // Allow selection
   selectable: true,
   
+  // Add more global selection handling
+  addGlobalAttributes() {
+    return [
+      {
+        types: ['toggleBlock'],
+        attributes: {
+          selectedText: {
+            default: '',
+            parseHTML: () => '',
+            renderHTML: () => ({}),
+          },
+        },
+      },
+    ]
+  },
+  
   addOptions() {
     return {
       HTMLAttributes: {
-        class: 'toggle-block',
+        class: 'toggle-block node-toggleBlock',
       },
     }
   },
@@ -90,7 +109,14 @@ export const ToggleBlock = Node.create<ToggleBlockOptions>({
   },
   
   renderHTML({ HTMLAttributes }) {
-    return ['div', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, { 'data-type': 'toggle-block' }), 0]
+    return [
+      'div', 
+      mergeAttributes(this.options.HTMLAttributes, HTMLAttributes, { 
+        'data-type': 'toggle-block',
+        'class': 'toggle-block node-toggleBlock'
+      }), 
+      0
+    ]
   },
   
   addNodeView() {
@@ -99,7 +125,7 @@ export const ToggleBlock = Node.create<ToggleBlockOptions>({
   
   addCommands() {
     return {
-      setToggleBlock: (title = 'Toggle') => ({ commands, chain, state }) => {
+      setToggleBlock: (title = 'Toggle', fromShortcut = false) => ({ commands, chain, state }) => {
         // Get the current node
         const { $from, $to } = state.selection
         const range = $from.blockRange($to)
@@ -113,23 +139,27 @@ export const ToggleBlock = Node.create<ToggleBlockOptions>({
         // Delete the current block
         const success = chain()
           .deleteRange({ from: range.start, to: range.end })
-          // Insert a toggle block with the title as an attribute
+          // Insert a toggle block with the title in the first paragraph
           .insertContent({
             type: 'toggleBlock',
             attrs: { title: toggleTitle, open: true },
             content: [
-              { type: 'paragraph' },
-              { type: 'paragraph' },
+              { 
+                type: 'paragraph', 
+                attrs: { class: 'toggle-title-first-paragraph' },
+                content: [{ type: 'text', text: toggleTitle }] 
+              },
               { type: 'paragraph' }
             ]
           })
           .run()
         
-        // Focus inside the toggle
+        // Improved focus behavior
         if (success) {
           setTimeout(() => {
-            const pos = state.selection.$from.pos + 1
-            chain().setTextSelection(pos).focus().run()
+            // Set node selection on the toggle block itself
+            const pos = state.selection.$from.before($from.depth);
+            chain().setNodeSelection(pos).run()
           }, 10)
         }
         
@@ -152,12 +182,53 @@ export const ToggleBlock = Node.create<ToggleBlockOptions>({
         // Convert to toggle block
         return commands.setToggleBlock()
       },
+      
+      // New command to toggle open/closed state
+      toggleOpenState: () => ({ tr, state, dispatch }) => {
+        const { $from } = state.selection
+        let node = $from.node($from.depth)
+        let pos = $from.before($from.depth)
+        
+        // If not directly in a toggle block, try to find one as a parent
+        if (node.type.name !== 'toggleBlock') {
+          for (let d = $from.depth; d > 0; d--) {
+            node = $from.node(d)
+            if (node.type.name === 'toggleBlock') {
+              pos = $from.before(d)
+              break
+            }
+          }
+        }
+        
+        if (node.type.name !== 'toggleBlock') {
+          return false
+        }
+        
+        if (dispatch) {
+          tr.setNodeAttribute(pos, 'open', !node.attrs.open)
+          dispatch(tr)
+        }
+        
+        return true
+      }
     }
   },
   
   addKeyboardShortcuts() {
     return {
       'Mod-Shift-t': () => this.editor.commands.toggleToggleBlock(),
+      // Add Space to toggle between open/closed when toggle is selected
+      'Space': () => {
+        const { state } = this.editor
+        const { selection } = state
+        
+        // Check if the selection is on a toggle block
+        if (selection.$from.parent.type.name === 'toggleBlock') {
+          return this.editor.commands.toggleOpenState()
+        }
+        
+        return false
+      }
     }
   },
 })
