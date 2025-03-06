@@ -365,11 +365,20 @@ mark[style] > strong {
   min-width: 0px;
 }
 
-.prose :where(p):not(:where([class~=not-prose], [class~=not-prose] *)) {
+.prose:not(.toggle-block) :where(p):not(:where([class~=not-prose], [class~=not-prose] *)) {
   /* default is too tall for paragraphs */
   margin-bottom: 0.7rem;
   margin-top: 0.7rem;
 }
+
+/* Override margins in toggle blocks to use padding instead */
+.toggle-block :where(p):not(:where([class~=not-prose], [class~=not-prose] *)) {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+}
+
 
 /* Drag Handle Commands Styling */
 .drag-handle-commands {
@@ -563,4 +572,47 @@ mark[style] > strong {
 .toggle-title .ai-placeholder,
 .toggle-summary .ai-placeholder {
   display: none !important;
+}
+
+/* Style the toggle content to appear connected to its header */
+.toggle-content-wrapper {
+  margin-top: -0.5rem;
+  /* Reduce space between header and content */
+  position: relative;
+}
+
+/* Add a visual connection between toggle header and content */
+.toggle-content-wrapper::before {
+  content: '';
+  position: absolute;
+  top: -0.5rem;
+  left: -0.25rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-left: 1px solid rgba(0, 0, 0, 0.1);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+/* Dark mode support */
+.dark .toggle-content-wrapper::before {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Style for the spacers */
+.toggle-block-spacer {
+  pointer-events: none;
+  position: relative;
+}
+
+/* Create an invisible shield over the toggle header when hovering content */
+.toggle-content-wrapper:hover::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  /* Adjust based on your layout */
+  pointer-events: none;
+  z-index: 1000;
 }

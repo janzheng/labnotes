@@ -48,6 +48,16 @@ export const ToggleBlock = Node.create<ToggleBlockOptions>({
             'data-open': attributes.open.toString(),
           }
         },
+      },
+      // Add a unique ID for connecting header and content
+      toggleId: {
+        default: () => `toggle-${Math.random().toString(36).substring(2, 11)}`,
+        parseHTML: element => element.getAttribute('data-toggle-id'),
+        renderHTML: attributes => {
+          return {
+            'data-toggle-id': attributes.toggleId,
+          }
+        },
       }
     }
   },
