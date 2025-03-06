@@ -120,7 +120,7 @@ export const threadgirlAction = defineAction({
         }
       ]
     } else if (command === "runThreadgirl") {
-      console.log('>>>>>> [threadgirlAction] query', query);
+      // console.log('>>>>>> [threadgirlAction] query', query);
       pipeline = [
         {
           "name": "threadgirlQuery",
@@ -138,7 +138,7 @@ export const threadgirlAction = defineAction({
       saveCache: saveCache,
     });
     
-    console.log('[threadgirlAction] result', result);
+    // console.log('[threadgirlAction] result', result);
 
     return {
       prompts: command === "getThreadgirlPrompts" ? result : null,
