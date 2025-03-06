@@ -40,6 +40,10 @@ import ClearFormatBackspace from "@/components/extensions/novel-tw/extensions/cl
 import GenerativeMenuSwitch from "@/components/extensions/novel-tw/generative/generative-menu-switch";
 import { AIShortcut, SpaceAITrigger } from "@/components/extensions/novel-tw/generative/ai-shortcut";
 import AITriggerManager from "@/components/extensions/novel-tw/generative/ai-trigger-manager";
+import { removeAIHighlight } from "./generative/ai-highlight";
+
+import ToggleBlock from "./extensions/toggle-block";
+import ToggleInputRule from "./extensions/toggle-input-rule";
 
 // Debug logger
 function logDebug(...args) {
@@ -137,7 +141,9 @@ const extensions = [
   SpaceAITrigger,
   Footnotes, 
   FootnoteReference, 
-  Footnote
+  Footnote,
+  ToggleBlock,
+  ToggleInputRule
 ];
 
 // Update the props interface
@@ -145,6 +151,8 @@ interface TailwindAdvancedEditorProps {
   defaultValue?: string | undefined;
   onChange?: (content: string, wordCount?: number) => void;
   editorRef?: React.MutableRefObject<EditorInstance | null>;
+  editorClasses?: string;
+  containerClasses?: string;
   onWordCountChange?: (count: number) => void;
   onSaveStatusChange?: (status: string) => void;
 }
@@ -155,7 +163,9 @@ const TailwindAdvancedEditor: React.FC<TailwindAdvancedEditorProps> = ({
   onChange,
   editorRef,
   onWordCountChange,
-  onSaveStatusChange
+  onSaveStatusChange,
+  editorClasses,
+  containerClasses
 }) => {
   const [openNode, setOpenNode] = useState(false);
   const [openLink, setOpenLink] = useState(false);
@@ -207,6 +217,9 @@ const TailwindAdvancedEditor: React.FC<TailwindAdvancedEditorProps> = ({
     // Debug keyboard shortcuts
     console.log('Editor ready, registered keyboard shortcuts:', 
       editorInstance.extensionManager.keyboardShortcuts);
+
+    // Clear any AI highlights that might have persisted from a previous session
+    removeAIHighlight(editorInstance);
 
     // Directly set the ref when the editor is ready
     if (editorRef) {
@@ -396,7 +409,7 @@ const TailwindAdvancedEditor: React.FC<TailwindAdvancedEditorProps> = ({
         <EditorContent
           initialContent={initialContent}
           extensions={extensions}
-          className="relative min-h-[500px] w-full max-w-screen-lg border-muted bg-background"
+          className={`relative min-h-[500px] w-full max-w-screen-lg border-muted ${containerClasses}`}
           editorProps={{
             handleDOMEvents: {
               keydown: (_view, event) => handleCommandNavigation(event),
@@ -404,8 +417,7 @@ const TailwindAdvancedEditor: React.FC<TailwindAdvancedEditorProps> = ({
             handlePaste: (view, event) => handleImagePaste(view, event, uploadFn),
             handleDrop: (view, event, _slice, moved) => handleImageDrop(view, event, moved, uploadFn),
             attributes: {
-              class:
-                "prose dark:prose-invert prose-headings:font-title font-default focus:outline-none max-w-full",
+              class: `prose dark:prose-invert prose-headings:font-title font-default focus:outline-none ${editorClasses}`,
             },
           }}
           onReady={onEditorReady}

@@ -1,21 +1,29 @@
+
+
 export async function executePipeline(pipeline: any[], settings: any = {}, useLocal: boolean = false) {
+  // const HOST = useLocal || import.meta.env.MODE === 'development' ? 'http://localhost:9999' : 'https://coverflow.deno.dev';
+
+  // const HOST = "https://coverflow.deno.dev";
+  const HOST = "http://localhost:9999";
+
+
   try {
     console.log("executePipeline",
       {
+        pipelineName: "labnotes",
         pipeline,
-        // ...settings // bad for uploading large images
-        settings: JSON.stringify(settings).substring(0, 5000)
+        ...settings
       }
     );
     const response = await fetch(
-      useLocal ? 'http://localhost:9999/execute' :
-        (import.meta.env.DEV ? 'http://localhost:9999/execute' : 'https://coverflow.deno.dev/execute'),
+      `${HOST}/execute`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          pipelineName: settings.pipelineName || "labnotes",
           pipeline,
           ...settings
         }),
@@ -33,23 +41,23 @@ export async function executePipeline(pipeline: any[], settings: any = {}, useLo
     console.error("Error in executePipeline:", error);
   }
 }
+
 export async function executeStreamingPipeline(pipeline: any[], settings: any = {}, useLocal: boolean = false) {
   const response = await fetch(
-    useLocal ? 'http://localhost:9999/stream-function' :
-      (import.meta.env.DEV ? 'http://localhost:9999/stream-function' : 'https://coverflow.deno.dev/stream-function'),
+    `${HOST}/stream-function`,
     {
       method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({
-      functionName: "gen",
-      settings: {
-        ...pipeline[0].settings,
-        outputType: "stream"
-      }
-    })
-  });
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        functionName: "gen",
+        settings: {
+          ...pipeline[0].settings,
+          outputType: "stream"
+        }
+      })
+    });
 
   return response;
 }

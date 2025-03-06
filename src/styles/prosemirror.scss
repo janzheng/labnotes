@@ -245,7 +245,7 @@ ul[data-type="taskList"] li[data-checked="true"] > div > p {
   border-radius: 0.25rem;
   margin-left: -0.8rem; /* Position to the left of the drag handle */
   background-color: #f1f5f9;
-  width: 1.2rem;
+  width: 1.5rem;
   height: 1.5rem;
   z-index: 50;
   cursor: pointer;
@@ -359,6 +359,11 @@ mark[style] > strong {
   tw/typography changes / overrides
 
 */
+
+.prose {
+  width: 100%;
+  min-width: 0px;
+}
 
 .prose :where(p):not(:where([class~=not-prose], [class~=not-prose] *)) {
   /* default is too tall for paragraphs */

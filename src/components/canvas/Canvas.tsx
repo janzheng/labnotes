@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { Project, ComponentConfig } from '@/lib/stores';
-import { addProject, selectedProjectId, assignComponentToProject, selectProject } from '@/lib/stores';
+import { addProject, assignComponentToProject, selectProject, projectsStore } from '@/lib/stores';
 import TypeA from './TypeA';
 import TypeB from './TypeB';
 import TypeC from './TypeC';
@@ -52,6 +52,16 @@ interface CanvasProps {
 }
 
 export const Canvas: React.FC<CanvasProps> = ({ project, onAssignType }) => {
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [titleValue, setTitleValue] = useState(project?.name || '');
+
+  // Update titleValue when project changes
+  useEffect(() => {
+    if (project?.name) {
+      setTitleValue(project.name);
+    }
+  }, [project?.name]);
+
   // Update URL when project changes
   useEffect(() => {
     if (project) {
@@ -61,6 +71,24 @@ export const Canvas: React.FC<CanvasProps> = ({ project, onAssignType }) => {
       }
     }
   }, [project?.id]);
+
+  const handleTitleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (titleValue.trim() && project) {
+      const currentState = projectsStore.get();
+      projectsStore.set({
+        ...currentState,
+        items: {
+          ...currentState.items,
+          [project.id]: {
+            ...currentState.items[project.id],
+            name: titleValue.trim()
+          }
+        }
+      });
+      setIsEditingTitle(false);
+    }
+  };
 
   const handleComponentSelect = async (type: keyof typeof COMPONENT_MAP) => {
     if (!project) {
@@ -80,9 +108,28 @@ export const Canvas: React.FC<CanvasProps> = ({ project, onAssignType }) => {
 
   return (
     <div className="p-6">
-      {project && <h1 className="text-2xl font-bold mb-6">{project.name}</h1>}
+      {project && (
+        isEditingTitle ? (
+          <form onSubmit={handleTitleSubmit} className="mb-6">
+            <input
+              value={titleValue}
+              onChange={(e) => setTitleValue(e.target.value)}
+              onBlur={handleTitleSubmit}
+              autoFocus
+              onFocus={(e) => e.target.select()}
+              className="text-2xl font-bold w-full bg-transparent border-b border-gray-300 focus:outline-none focus:border-gray-500"
+            />
+          </form>
+        ) : (
+          <h1 
+            className="text-2xl font-bold mb-6 cursor-pointer hover:text-gray-600 transition-colors"
+            onDoubleClick={() => setIsEditingTitle(true)}
+          >
+            {project.name}
+          </h1>
+        )
+      )}
 
-      
       <div className="space-y-6">
         {project?.components?.map((config, index) => {
           const Component = COMPONENT_MAP[config.type];

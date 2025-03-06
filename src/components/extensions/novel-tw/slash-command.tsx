@@ -1,5 +1,6 @@
 import {
   CheckSquare,
+  ChevronRight,
   Code,
   Heading1,
   Heading2,
@@ -47,14 +48,27 @@ export const suggestionItems = createSuggestionItems([
     },
   },
   {
-    title: "Send Feedback",
-    description: "Let us know how we can improve.",
-    icon: <MessageSquarePlus size={18} />,
+    title: "Toggle",
+    description: "Create a collapsible toggle block",
+    icon: <ChevronRight className="w-4 h-4" />,
     command: ({ editor, range }) => {
-      editor.chain().focus().deleteRange(range).run();
-      window.open("/feedback", "_blank");
-    },
+      editor
+        .chain()
+        .focus()
+        .deleteRange(range)
+        .setToggleBlock()
+        .run();
+    }
   },
+  // {
+  //   title: "Send Feedback",
+  //   description: "Let us know how we can improve.",
+  //   icon: <MessageSquarePlus size={18} />,
+  //   command: ({ editor, range }) => {
+  //     editor.chain().focus().deleteRange(range).run();
+  //     window.open("/feedback", "_blank");
+  //   },
+  // },
   {
     title: "Text",
     description: "Just start typing with plain text.",

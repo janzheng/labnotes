@@ -242,9 +242,9 @@ const Novel: React.FC<{ config: ComponentConfig }> = ({ config }) => {
   };
 
   return (
-    <div className="space-y-4 border p-5 rounded-lg bg-white">
+    <div className="space-y-4 border p-5 rounded-lg">
       <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold">Notebook Page</h2>
+        {/* <h2 className="text-lg font-semibold">Notebook Page</h2> */}
         <div className="flex items-center gap-3 text-sm">
           <div className="rounded-lg bg-accent px-2 py-1 text-muted-foreground">
             {saveStatus}
@@ -264,6 +264,8 @@ const Novel: React.FC<{ config: ComponentConfig }> = ({ config }) => {
       <div className="novel-editor-container">
         <TailwindAdvancedEditor 
           key={`novel-editor-${config.projectId}-${config.componentIndex}`}
+          containerClasses=""
+          editorClasses=""
           defaultValue={data.content} 
           onChange={handleContentChange}
           editorRef={editorRef}

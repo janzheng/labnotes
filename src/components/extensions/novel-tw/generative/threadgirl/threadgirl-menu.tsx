@@ -111,16 +111,24 @@ const ThreadgirlMenu: React.FC<ThreadgirlMenuProps> = ({
 
   // Add this utility function somewhere in the file, outside the component
   const processThreadgirlResponse = (response: string): string => {
-    // Check if the response is wrapped in quotes
-    const quotedMarkdownRegex = /^"(.*)"$/s;
-    const match = response.match(quotedMarkdownRegex);
-    
-    if (match) {
-      // Return the content inside the quotes
-      return match[1];
+    try {
+      // Check if response is an array and join if it is
+      if (Array.isArray(response)) {
+        return response.join('\n');
+      }
+      // Check if the response is wrapped in quotes
+      const quotedMarkdownRegex = /^"(.*)"$/s;
+      const match = response.match(quotedMarkdownRegex);
+      
+      if (match) {
+        // Return the content inside the quotes
+        return match[1];
+      }
+    } catch (error) {
+      console.error("Error processing threadgirl response:", response, error);
     }
     
-    // Return original if not quoted
+    // Return original if not quoted or if there was an error
     return response;
   };
 
@@ -192,8 +200,6 @@ const ThreadgirlMenu: React.FC<ThreadgirlMenuProps> = ({
           return;
         }
         
-        console.log("[THREADGIRL-MENU] Received Threadgirl response");
-        
         // Ensure we have a result before proceeding
         if (!data || !data.result) {
           toast.error("Threadgirl returned an empty result");
@@ -202,7 +208,10 @@ const ThreadgirlMenu: React.FC<ThreadgirlMenuProps> = ({
           setLoadingOperation(null);
           return;
         }
-        
+
+
+        console.log("[THREADGIRL-MENU] Received Threadgirl response:", data);
+
         // Process the result to handle quoted content
         const processedResult = processThreadgirlResponse(data.result);
         

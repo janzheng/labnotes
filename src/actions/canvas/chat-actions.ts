@@ -113,7 +113,7 @@ export const threadgirlAction = defineAction({
     if (command === "getThreadgirlPrompts") {
       pipeline = [
         {
-          "name": "getPrompts",
+          "name": "getThreadgirlPrompts",
           "settings": {
             "useCache": useCache,
           }
@@ -123,7 +123,7 @@ export const threadgirlAction = defineAction({
       console.log('>>>>>> [threadgirlAction] query', query);
       pipeline = [
         {
-          "name": "threadgirlquery",
+          "name": "threadgirlQuery",
           "settings": {
             "query": query,
             "useCache": useCache,
