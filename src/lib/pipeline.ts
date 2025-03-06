@@ -1,10 +1,10 @@
 
 
 export async function executePipeline(pipeline: any[], settings: any = {}, useLocal: boolean = false) {
-  // const HOST = useLocal || import.meta.env.MODE === 'development' ? 'http://localhost:9999' : 'https://coverflow.deno.dev';
+  const HOST = useLocal || import.meta.env.MODE === 'development' ? 'http://localhost:9999' : 'https://coverflow.deno.dev';
 
   // const HOST = "https://coverflow.deno.dev";
-  const HOST = "http://localhost:9999";
+  // const HOST = "http://localhost:9999";
 
 
   try {

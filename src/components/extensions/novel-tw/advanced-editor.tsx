@@ -190,9 +190,65 @@ const TailwindAdvancedEditor: React.FC<TailwindAdvancedEditorProps> = ({
       // Check if the click target is not inside the editor content
       const editorElement = containerRef.current.querySelector('.ProseMirror');
       if (editorElement && !editorElement.contains(e.target as Node)) {
-        // Focus the editor - but DON'T force cursor to the end
-        // This change allows the cursor to stay where it was
-        editor.commands.focus(); // Removed 'end' parameter
+        // Get editor content element dimensions
+        const editorRect = editorElement.getBoundingClientRect();
+        
+        // Check if click is below the editor content
+        if (e.clientY > editorRect.bottom) {
+          console.log('Click detected below editor content');
+          
+          try {
+            // Get the document and check the last node
+            const { doc } = editor.state;
+            const lastNode = doc.lastChild;
+            
+            // Check if the last node is an empty paragraph
+            const isLastNodeEmptyParagraph = 
+              lastNode && 
+              lastNode.type.name === 'paragraph' && 
+              lastNode.content.size === 0;
+            
+            if (isLastNodeEmptyParagraph) {
+              // If there's already an empty paragraph at the end, just focus on it
+              console.log('Found empty paragraph at the end, focusing it');
+              editor.commands.focus('end');
+            } else {
+              // Otherwise, create a new paragraph
+              console.log('Creating new paragraph at the end');
+              
+              // Get the document size
+              const endPosition = doc.content.size;
+              
+              // Create a transaction to insert a paragraph at the end
+              const tr = editor.state.tr;
+              
+              // Create a new paragraph node
+              const paragraphNode = editor.schema.nodes.paragraph.create();
+              
+              // Insert the paragraph at the end of the document
+              tr.insert(endPosition, paragraphNode);
+              
+              // Set the selection to the new paragraph
+              const newPos = endPosition + 1;
+              tr.setSelection(editor.state.selection.constructor.near(tr.doc.resolve(newPos)));
+              
+              // Apply the transaction
+              editor.view.dispatch(tr);
+              
+              // Focus the editor after the transaction
+              setTimeout(() => {
+                editor.commands.focus();
+              }, 10);
+              
+              console.log('Added new paragraph at the end with direct transaction');
+            }
+          } catch (error) {
+            console.error('Error handling click below editor:', error);
+          }
+        } else {
+          // Regular focus behavior for other areas
+          editor.commands.focus();
+        }
       }
     }
   }, [editor]);
@@ -403,7 +459,7 @@ const TailwindAdvancedEditor: React.FC<TailwindAdvancedEditorProps> = ({
   
   return (
     <div 
-      className="relative" 
+      className="relative flex flex-col" 
       ref={containerRef} 
       onClick={handleContainerClick}
     >
@@ -484,6 +540,9 @@ const TailwindAdvancedEditor: React.FC<TailwindAdvancedEditorProps> = ({
           }} />
         </EditorContent>
       </EditorRoot>
+      
+      {/* Add an invisible click target area below the editor */}
+      <div className="h-16 w-full cursor-text" aria-hidden="true"></div>
     </div>
   );
 };
