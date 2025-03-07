@@ -1,5 +1,5 @@
 import { BasicProvider } from '@basictech/react';
-import { schema } from '../../../basic.config'
+import { schema } from '@/basic.config'
 
 import { ProjectWorkspace } from "@/components/ProjectWorkspace";
 import ProjectContainer from "@/components/react/ProjectContainer";

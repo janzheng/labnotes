@@ -1,9 +1,24 @@
 import { useBasic } from '@basictech/react';
 import { Button } from '@/components/ui/button';
-import { UserIcon, LogOutIcon } from 'lucide-react';
+import { UserIcon, LogOutIcon, DatabaseIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 export function BasicAuthButton() {
-  const { signin, signout, isSignedIn, user } = useBasic();
+  const { signin, signout, isSignedIn, user, getToken, db } = useBasic();
+  
+  useEffect(() => {
+    // Renamed function to avoid naming conflict with destructured getToken
+    const fetchToken = async () => {
+      if (isSignedIn && user) {
+        const token = await getToken();
+        // console.log('Signed in user:', user);
+        // console.log('User token:', token);
+        console.log('Database:', await db.collection('projects').getAll());
+      }
+    };
+    fetchToken();
+  }, [isSignedIn, user, getToken]); // Added getToken to dependency array
+
   return (
     <div className="flex items-center gap-2 p-2">
       {isSignedIn ? (
@@ -15,7 +30,7 @@ export function BasicAuthButton() {
             variant="ghost" 
             size="sm"
             onClick={signout}
-            className="h-8"
+            className="h-8 mr-2"
           >
             <LogOutIcon size={16} className="mr-2" />
             Sign Out
@@ -32,6 +47,7 @@ export function BasicAuthButton() {
           Sign In
         </Button>
       )}
+
     </div>
   );
 } 

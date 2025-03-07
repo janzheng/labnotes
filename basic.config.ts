@@ -27,6 +27,29 @@ export const schema = {
         "data": {
           "type": "json",
           "indexed": true
+          /*
+            Suggested structure for project data:
+
+            {
+              "projectMetadata": {
+                "name": "Project Name",
+                "projectVersion": 1,       // Increment when project metadata changes
+                "parentId": "optional-parent-id",
+                "type": "project"          // or "folder"
+              },
+              "components": [
+                {
+                  "type": "emoji",
+                  "componentVersion": 1,    // Increment when component data changes
+                  "lastModified": 1660000000000, // Component-specific lastModified timestamp
+                  "data": {
+                    "emojis": ["✨", "⭐"]  // Your component's internal data
+                  }
+                }
+                // Additional components with similar structure…
+              ]
+            }
+          */
         }
       }
     }

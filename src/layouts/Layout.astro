@@ -24,3 +24,20 @@ import "@/styles/global.css";
     height: 100%;
   }
 </style>
+
+<script>
+  // This helps prevent navigation flashes
+  document.addEventListener("astro:page-load", () => {
+    // Ensure client-side navigation doesn't cause full re-renders
+    const wrapper = document.querySelector(".transition-opacity");
+    if (wrapper) {
+      wrapper.classList.remove("opacity-0");
+    }
+  });
+
+  // Intercept any client-side history navigation to handle it gracefully
+  window.addEventListener("popstate", (event) => {
+    // Don't reload the page on history navigation
+    event.preventDefault();
+  });
+</script>

@@ -31,17 +31,20 @@ const ComponentSelector: React.FC<{ onAssignType: (type: keyof typeof COMPONENT_
   onAssignType 
 }) => {
   return (
-    <div className="grid grid-cols-2 gap-4 p-6">
-      {(Object.keys(COMPONENT_MAP) as Array<keyof typeof COMPONENT_MAP>).map((type) => (
-        <button
-          key={type}
-          onClick={() => onAssignType(type)}
-          className="p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-        >
-          <h3 className="font-semibold mb-2">{type}</h3>
-          <p className="text-sm text-gray-600">Click to add this component</p>
-        </button>
-      ))}
+    <div>
+      <h1>Pick a component</h1>
+      <div className="grid grid-cols-2 gap-4 p-6">
+        {(Object.keys(COMPONENT_MAP) as Array<keyof typeof COMPONENT_MAP>).map((type) => (
+          <button
+            key={type}
+            onClick={() => onAssignType(type)}
+            className="p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+          >
+            <h3 className="font-semibold mb-2">{type}</h3>
+            <p className="text-sm text-gray-600">Click to add this component</p>
+          </button>
+        ))}
+      </div>
     </div>
   );
 };

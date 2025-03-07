@@ -37,7 +37,7 @@ export const isHistorySectionCollapsed = atom(false);
 export const expandedFolders = atom<Record<string, boolean>>({});
 
 // BasicTech feature toggle
-export const isBasicTechEnabled = atom(false); // Set default to false to disable by default
+export const isBasicTechEnabled = atom(true); // This is an OVERRIDE — Set default to false to disable by default
 
 // UI style preferences
 export const cursorPointerClass = 'cursor-pointer'; // CSS class for clickable elements

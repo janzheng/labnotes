@@ -19,7 +19,6 @@ import { Input } from '@/components/ui/input';
 import { useDroppable } from "@dnd-kit/core";
 import { BasicAuthButton } from '@/components/auth/BasicAuthButton';
 import { DeleteConfirmationModal } from '@/components/DeleteConfirmationModal';
-import { useBasic } from '@basictech/react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
@@ -286,7 +285,6 @@ export function ProjectSidebar() {
   const [isClient, setIsClient] = useState(false);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hoverLevel, setHoverLevel] = useState(0);
-  const { db, isSignedIn } = useBasic();
   
   // State for project renaming in history section
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
