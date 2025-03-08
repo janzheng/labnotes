@@ -28,7 +28,6 @@ import {
 import { cx } from "class-variance-authority";
 import { common, createLowlight } from "lowlight";
 import { TaskBackspace } from "./extensions/task-backspace";
-import EnhancedDragHandle from "./extensions/enhanced-drag-handle";
 
 //TODO I am using cx here to get tailwind autocomplete working, idk if someone else can write a regex to just capture the class key in objects
 const aiHighlight = AIHighlight;

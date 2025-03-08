@@ -50,6 +50,8 @@
   --sidebar-accent-foreground: hsl(240 5.9% 10%);
   --sidebar-border: hsl(220 13% 91%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
+
+  --width-prose: 76ch;
 }
 
 /* .dark {
@@ -134,5 +136,10 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+
+  .w-prose {
+    max-width: var(--width-prose);
   }
 }

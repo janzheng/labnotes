@@ -1,6 +1,8 @@
 @media (min-width: 640px) {
   .ProseMirror {
-    @apply px-12 py-4;
+    @apply pl-12 pr-0 py-4;
+    /* width: var(--width-prose) !important; */
+    max-width: var(--width-prose);
   }
 }
 

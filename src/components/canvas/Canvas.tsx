@@ -32,8 +32,8 @@ const ComponentSelector: React.FC<{ onAssignType: (type: keyof typeof COMPONENT_
 }) => {
   return (
     <div>
-      <h1>Pick a component</h1>
-      <div className="grid grid-cols-2 gap-4 p-6">
+      <h1 className="text-2xl font-bold mb-6">Pick a component</h1>
+      <div className="grid grid-cols-2 gap-4 pr-6 pl-0">
         {(Object.keys(COMPONENT_MAP) as Array<keyof typeof COMPONENT_MAP>).map((type) => (
           <button
             key={type}
@@ -55,7 +55,6 @@ interface CanvasProps {
 }
 
 export const Canvas: React.FC<CanvasProps> = ({ project, onAssignType }) => {
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState(project?.name || '');
 
   // Update titleValue when project changes
@@ -89,7 +88,6 @@ export const Canvas: React.FC<CanvasProps> = ({ project, onAssignType }) => {
           }
         }
       });
-      setIsEditingTitle(false);
     }
   };
 
@@ -112,25 +110,15 @@ export const Canvas: React.FC<CanvasProps> = ({ project, onAssignType }) => {
   return (
     <div className="p-6">
       {project && (
-        isEditingTitle ? (
-          <form onSubmit={handleTitleSubmit} className="mb-6">
-            <input
-              value={titleValue}
-              onChange={(e) => setTitleValue(e.target.value)}
-              onBlur={handleTitleSubmit}
-              autoFocus
-              onFocus={(e) => e.target.select()}
-              className="text-2xl font-bold w-full bg-transparent border-b border-gray-300 focus:outline-none focus:border-gray-500"
-            />
-          </form>
-        ) : (
-          <h1 
-            className="text-2xl font-bold mb-6 cursor-pointer hover:text-gray-600 transition-colors"
-            onDoubleClick={() => setIsEditingTitle(true)}
-          >
-            {project.name}
-          </h1>
-        )
+        <form onSubmit={handleTitleSubmit} className="mb-6">
+          <input
+            value={titleValue}
+            onChange={(e) => setTitleValue(e.target.value)}
+            onBlur={handleTitleSubmit}
+            className="text-4xl font-bold w-full bg-transparent focus:outline-none"
+            aria-label="Project title"
+          />
+        </form>
       )}
 
       <div className="space-y-6">

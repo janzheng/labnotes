@@ -16,6 +16,23 @@ export const schema = {
     "projects": {
       "type": "collection",
       "fields": {
+        "data": {
+          "type": "json",
+          "indexed": true
+        },
+        "localId": {
+          "type": "string",
+          "indexed": true
+        },
+        "lastModified": {
+          "type": "number",
+          "indexed": true
+        }
+      }
+    },
+    "workspaces": {
+      "type": "collection",
+      "fields": {
         "localId": {
           "type": "string",
           "indexed": true
@@ -31,6 +48,6 @@ export const schema = {
       }
     }
   },
-  "version": 9,
+  "version": 10,
   "project_id": "1b9522ea-a896-45f0-b3fa-082ed2110ed4"
 }

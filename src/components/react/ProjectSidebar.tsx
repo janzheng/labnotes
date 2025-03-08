@@ -194,7 +194,8 @@ const ProjectItem: React.FC<ProjectItemProps> = ({ project, level = 0, dragHandl
                 onBlur={handleNameSubmit}
                 autoFocus
                 onFocus={(e) => e.target.select()}
-                className="relative bg-gray-50 h-8 !border-gray-400 px-2 pt-0 leading-normal baseline focus:outline-none focus:ring-0 ring-offset-0 focus:ring-offset-0 [&:focus]:ring-offset-0 [&:focus-visible]:ring-0 [&:focus-visible]:ring-offset-0"
+                defaultClassName="file:text-foreground placeholder:text-muted-foreground selection:bg-[#B5D8FE] flex w-full min-w-0 bg-transparent text-base transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive"
+                className="relative bg-white px-2 pt-0 leading-normal baseline focus:outline-none focus:ring-0 ring-offset-0 focus:ring-offset-0 [&:focus]:ring-offset-0 [&:focus-visible]:ring-0 [&:focus-visible]:ring-offset-0"
               />
             </form>
           ) : (
@@ -474,10 +475,10 @@ export function ProjectSidebar() {
             <div className="flex gap-1 items-center">
               {!projectsCollapsed && (
                 <>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleAddFolder(); }}>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 cursor-pointer" onClick={(e) => { e.stopPropagation(); handleAddFolder(); }}>
                     <FolderIcon size={14} />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={(e) => { e.stopPropagation(); handleAddProject(); }}>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 cursor-pointer" onClick={(e) => { e.stopPropagation(); handleAddProject(); }}>
                     <FilePlusIcon size={14} />
                   </Button>
                 </>
@@ -539,7 +540,7 @@ export function ProjectSidebar() {
           ) : null}
         </SidebarGroup>
 
-        <SidebarGroup>
+        <SidebarGroup className={`${projectsCollapsed ? "order-2" : "mt-auto"}`}>
           <div 
             className="flex items-center justify-between px-2 cursor-pointer" 
             onClick={toggleHistorySection}
@@ -566,9 +567,9 @@ export function ProjectSidebar() {
                       className="flex-1 truncate cursor-pointer" 
                       onDoubleClick={(e) => {
                         e.stopPropagation();
-                        // Set the project for editing
                         setEditingProjectId(project.id);
                         setEditingProjectName(project.name);
+                        debugger;
                       }}
                     >
                       {editingProjectId === project.id ? (
@@ -583,7 +584,8 @@ export function ProjectSidebar() {
                             onBlur={() => handleRenameSubmit(null, project.id)}
                             autoFocus
                             onFocus={(e) => e.target.select()}
-                            className="relative bg-gray-50 h-8 !border-gray-400 px-2 pt-0 leading-normal baseline focus:outline-none focus:ring-0 ring-offset-0 focus:ring-offset-0 [&:focus]:ring-offset-0 [&:focus-visible]:ring-0 [&:focus-visible]:ring-offset-0"
+                            defaultClassName="file:text-foreground placeholder:text-muted-foreground selection:bg-[#B5D8FE] flex w-full min-w-0 bg-transparent text-base transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive"
+                            className="relative bg-white px-2 pt-0 leading-normal baseline focus:outline-none focus:ring-0 ring-offset-0 focus:ring-offset-0 [&:focus]:ring-offset-0 [&:focus-visible]:ring-0 [&:focus-visible]:ring-offset-0"
                           />
                         </form>
                       ) : (
@@ -621,13 +623,166 @@ export function ProjectSidebar() {
   return (
     <Sidebar variant="">
       <DeleteConfirmationModal />
-      <SidebarContent>
+      <SidebarContent className="flex flex-col h-full">
         <SidebarGroup>
           <div className="text-lg font-semibold pt-4 px-2">
             <a href="/" className="hover:text-gray-600 transition-colors">labnotes.</a>
           </div>
         </SidebarGroup>
-        {renderContent()}
+        
+        <div className="flex flex-col flex-grow">
+          {/* Projects section - always at the top */}
+          <SidebarGroup>
+            <div 
+              className="flex items-center justify-between px-2 cursor-pointer" 
+              onClick={toggleProjectsSection}
+            >
+              <SidebarGroupLabel>Projects</SidebarGroupLabel>
+              <div className="flex gap-1 items-center">
+                {!projectsCollapsed && (
+                  <>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 cursor-pointer" onClick={(e) => { e.stopPropagation(); handleAddFolder(); }}>
+                      <FolderIcon size={14} />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-6 w-6 cursor-pointer" onClick={(e) => { e.stopPropagation(); handleAddProject(); }}>
+                      <FilePlusIcon size={14} />
+                    </Button>
+                  </>
+                )}
+                {projectsCollapsed ? 
+                  <ChevronRightIcon size={16} className="text-muted-foreground" /> : 
+                  <ChevronDownIcon size={16} className="text-muted-foreground" />
+                }
+              </div>
+            </div>
+            
+            {!projectsCollapsed && isClient ? (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragStart={handleDragStart}
+                onDragEnd={handleDragEnd}
+                onDragOver={handleDragOver}
+              >
+                <div>
+                  {store.rootIds.map((id, i) => (
+                    <React.Fragment key={`root-fragment-${id}-${i}`}>
+                      <DropZone parentId={null} index={i} level={0} />
+                      {store.items[id] && (
+                        <SortableProjectItem 
+                          key={id} 
+                          project={store.items[id]} 
+                          onProjectClick={handleProjectClick}
+                        />
+                      )}
+                    </React.Fragment>
+                  ))}
+                  <DropZone parentId={null} index={store.rootIds.length} level={0} />
+                </div>
+
+                <DragOverlay>
+                  {activeId && store.items[activeId] ? (
+                    <div className="list-none" style={{ paddingLeft: `${hoverLevel * 12}px` }}>
+                      <ProjectItem 
+                        project={store.items[activeId]} 
+                        onProjectClick={handleProjectClick}
+                      />
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
+            ) : !projectsCollapsed ? (
+              <SidebarMenu className="list-none [&_li]:list-none">
+                {store.rootIds.map((id, i) => (
+                  store.items[id] && (
+                    <ProjectItem 
+                      key={`menu-item-${id}-${i}`}
+                      project={store.items[id]} 
+                      onProjectClick={handleProjectClick}
+                    />
+                  )
+                ))}
+              </SidebarMenu>
+            ) : null}
+          </SidebarGroup>
+
+          {/* History section - at the top if projects is closed, otherwise at the bottom */}
+          <SidebarGroup className={`${projectsCollapsed ? "order-2" : "mt-auto"}`}>
+            <div 
+              className="flex items-center justify-between px-2 cursor-pointer" 
+              onClick={toggleHistorySection}
+            >
+              <SidebarGroupLabel>History</SidebarGroupLabel>
+              <div className="flex gap-1 items-center">
+                {historyCollapsed ? 
+                  <ChevronRightIcon size={16} className="text-muted-foreground" /> : 
+                  <ChevronDownIcon size={16} className="text-muted-foreground" />
+                }
+              </div>
+            </div>
+            
+            {!historyCollapsed && (
+              <SidebarMenu className="list-none [&_li]:list-none">
+                {getProjectsByLastModified().slice(0, 10).map((project) => (
+                  <SidebarMenuItem key={`history-${project.id}`} className="group/item list-none">
+                    <div
+                      className="group relative flex w-full items-center gap-2 rounded-md p-2 text-sm outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                      onClick={() => handleProjectClick(project.id)}
+                    >
+                      <FileIcon size={16} />
+                      <span 
+                        className="flex-1 truncate cursor-pointer" 
+                        onDoubleClick={(e) => {
+                          e.stopPropagation();
+                          setEditingProjectId(project.id);
+                          setEditingProjectName(project.name);
+                        }}
+                      >
+                        {editingProjectId === project.id ? (
+                          <form 
+                            onSubmit={(e) => handleRenameSubmit(e, project.id)} 
+                            className="flex-1 flex items-center" 
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <Input
+                              value={editingProjectName}
+                              onChange={e => setEditingProjectName(e.target.value)}
+                              onBlur={() => handleRenameSubmit(null, project.id)}
+                              autoFocus
+                              onFocus={(e) => e.target.select()}
+                              defaultClassName="file:text-foreground placeholder:text-muted-foreground selection:bg-[#B5D8FE] flex w-full min-w-0 bg-transparent text-base transition-[color,box-shadow] outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive"
+                              className="relative bg-white px-2 pt-0 leading-normal baseline focus:outline-none focus:ring-0 ring-offset-0 focus:ring-offset-0 [&:focus]:ring-offset-0 [&:focus-visible]:ring-0 [&:focus-visible]:ring-offset-0"
+                            />
+                          </form>
+                        ) : (
+                          project.name
+                        )}
+                      </span>
+                      <div className="flex items-center">
+                        <span className="text-xs text-gray-400 group-hover/item:hidden">
+                          {project.lastModified ? dayjs(project.lastModified).fromNow() : 'N/A'}
+                        </span>
+                        <button
+                          className="hidden group-hover/item:flex h-5 w-5 items-center justify-center rounded hover:bg-background/80"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(project.id);
+                          }}
+                          title="Delete project"
+                        >
+                          <XIcon size={14} className="text-muted-foreground hover:text-foreground" />
+                        </button>
+                      </div>
+                    </div>
+                  </SidebarMenuItem>
+                ))}
+                {getProjectsByLastModified().length === 0 && (
+                  <div className="p-2 text-sm text-gray-500">No recent projects</div>
+                )}
+              </SidebarMenu>
+            )}
+          </SidebarGroup>
+        </div>
       </SidebarContent>
       <SidebarFooter className="space-y-2">
         <BasicAuthButton />

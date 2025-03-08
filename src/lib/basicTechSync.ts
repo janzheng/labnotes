@@ -10,6 +10,13 @@ export function useBasicTechSession() {
   const basicTechEnabled = isBasicTechEnabled.get();
   const { db, isSignedIn } = useBasic();
   
+  // Add debug logging to help diagnose the issue
+  console.log('BasicTech Session Check:', { 
+    basicTechEnabled, 
+    isSignedIn, 
+    hasDb: !!db 
+  });
+  
   // Add a helper function to find a project by localId
   const findProjectByLocalId = async (localId: string) => {
     if (!db) return null;
@@ -62,15 +69,10 @@ export function useSyncedComponentData<T extends Record<string, any>>(
 
     const currentState = projectsStore.get();
     const project = currentState.items[config.projectId];
-
-    console.log('Project:', project);
-
     if (!project || project.type !== 'project') {
       setIsSyncing(false);
       return;
     }
-
-    console.log('Project data:', project.components);
 
     const projectData = {
       id: project.id,

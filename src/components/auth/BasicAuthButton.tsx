@@ -13,7 +13,10 @@ export function BasicAuthButton() {
         const token = await getToken();
         // console.log('Signed in user:', user);
         // console.log('User token:', token);
-        console.log('Database:', await db.collection('projects').getAll());
+        console.log('BasicDB:', {
+          projects: await db.collection('projects').getAll(),
+          workspaces: await db.collection('workspaces').getAll()
+        });
       }
     };
     fetchToken();

@@ -46,6 +46,26 @@ import ToggleBlock from "./extensions/toggle-block";
 import ToggleInputRule from "./extensions/toggle-input-rule";
 import QuoteInputRule from "./extensions/quote-input-rule";
 
+// Add this utility function to get markdown from the editor
+export function getMarkdownFromEditor(editor: EditorInstance | null): string {
+  if (!editor) return '';
+  
+  try {
+    // Check if the markdown extension is enabled and has a serializer
+    if (editor.extensionManager.extensions.find(ext => ext.name === 'markdown')) {
+      // Use the markdown serializer if available
+      return editor.storage.markdown?.getMarkdown() || '';
+    } else {
+      // Fallback to plain text if markdown extension is not available
+      return editor.getText();
+    }
+  } catch (error) {
+    console.error('Error getting markdown from editor:', error);
+    // Fallback to plain text
+    return editor.getText();
+  }
+}
+
 // Debug logger
 function logDebug(...args) {
   if (window.___novelAdvEditorDebug) {
@@ -121,6 +141,88 @@ const customDragHandle = GlobalDragHandle.configure({
   }
 });
 
+// Add this custom extension to prevent scroll jumps
+import { Extension } from '@tiptap/core';
+
+// Create a scroll preservation extension with a simpler approach
+const PreserveScrollExtension = Extension.create({
+  name: 'preserveScroll',
+  
+  // Use addProseMirrorPlugins instead of directly modifying the view
+  addProseMirrorPlugins() {
+    return [{
+      props: {
+        // Use handleDOMEvents to capture the editor state before any changes
+        handleDOMEvents: {
+          scroll: (view) => {
+            // Store current scroll position on the view instance
+            view.scrollPosition = {
+              top: view.dom.scrollTop,
+              left: view.dom.scrollLeft
+            };
+            return false; // Let the event propagate
+          }
+        },
+        // Use appendTransaction to restore scroll after content changes
+        appendTransaction: (transactions, oldState, newState) => {
+          // Only proceed if the document changed
+          const docChanged = transactions.some(tr => tr.docChanged);
+          if (!docChanged) return null;
+          
+          // Get the editor view
+          const view = this.editor?.view;
+          if (!view) return null;
+          
+          // Restore scroll position after the next browser paint cycle
+          setTimeout(() => {
+            if (view.scrollPosition) {
+              view.dom.scrollTop = view.scrollPosition.top;
+              view.dom.scrollLeft = view.scrollPosition.left;
+            }
+          }, 0);
+          
+          return null; // No need to create a new transaction
+        }
+      }
+    }];
+  }
+});
+
+// Alternative approach if the above still causes issues
+const createScrollPreservationPlugin = () => {
+  let scrollPosition = { top: 0, left: 0 };
+  
+  return Extension.create({
+    name: 'preserveScroll',
+    
+    onTransaction({ editor, transaction }) {
+      // Skip if no document changes
+      if (!transaction.docChanged) return;
+      
+      // Get the DOM element
+      const element = editor.view.dom;
+      
+      // Restore scroll position
+      setTimeout(() => {
+        element.scrollTop = scrollPosition.top;
+        element.scrollLeft = scrollPosition.left;
+      }, 0);
+    },
+    
+    onUpdate() {
+      // Save scroll position on any update
+      const element = this.editor.view.dom;
+      scrollPosition = {
+        top: element.scrollTop,
+        left: element.scrollLeft
+      };
+    }
+  });
+};
+
+// Use the alternative approach if the first one causes issues
+const PreserveScrollPlugin = createScrollPreservationPlugin();
+
 // Modify the extensions array to include our drag state manager and new extension
 const extensions = [
   ...defaultExtensions.filter(extension => extension.name !== 'document' && extension.name !== 'globalDragHandle'),
@@ -145,7 +247,8 @@ const extensions = [
   Footnote,
   ToggleBlock,
   ToggleInputRule,
-  QuoteInputRule
+  QuoteInputRule,
+  PreserveScrollPlugin, // Use the alternative plugin
 ];
 
 // Update the props interface
@@ -268,7 +371,7 @@ const TailwindAdvancedEditor: React.FC<TailwindAdvancedEditorProps> = ({
     }
   }, [onWordCountChange]);
 
-  // Clean implementation of onEditorReady
+  // Update the onEditorReady function to add scroll preservation
   const onEditorReady = useCallback((editorInstance: EditorInstance) => {
     setEditor(editorInstance);
     
@@ -289,21 +392,38 @@ const TailwindAdvancedEditor: React.FC<TailwindAdvancedEditorProps> = ({
         isUpdatingExternally.current = true;
         
         try {
+          // Save scroll position
+          const editorElement = editorInstance.view.dom;
+          const scrollPosition = {
+            top: editorElement.scrollTop,
+            left: editorElement.scrollLeft
+          };
+          
           // Replace with new content
           editorInstance.commands.setContent(content, false);
+          
+          // Restore scroll position
+          setTimeout(() => {
+            editorElement.scrollTop = scrollPosition.top;
+            editorElement.scrollLeft = scrollPosition.left;
+          }, 0);
           
           // Update word count
           updateWordCount(editorInstance);
           
-          // Force re-render for complete update
+          // Reset update flag
           setTimeout(() => {
-            editorInstance.commands.focus('end');
             isUpdatingExternally.current = false;
           }, 0);
         } catch (error) {
           console.error('Error in forceUpdate:', error);
           isUpdatingExternally.current = false;
         }
+      };
+      
+      // Add getMarkdown method to the editor instance
+      (editorInstance as any).getMarkdown = () => {
+        return getMarkdownFromEditor(editorInstance);
       };
     }
     
