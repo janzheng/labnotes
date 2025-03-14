@@ -135,7 +135,7 @@ const EditorBlock: React.FC<{
 
 const CodeGen: React.FC<{ config: ComponentConfig }> = ({ config }) => {
   const basicTechEnabled = isBasicTechEnabled.get();
-  console.log('[basic.db] enabled:', basicTechEnabled);
+  // console.log('[basic.db] enabled:', basicTechEnabled);
   const { db, isSignedIn } = useBasic();
   
   // Get remote project data only if BasicTech is enabled

@@ -16,7 +16,7 @@ export const StreamChat: React.FC<{ config: ComponentConfig }> = ({ config }) =>
   const [currentStreamingMessage, setCurrentStreamingMessage] = useState('');
   const [userPrompt, setUserPrompt] = useState('');
   const basicTechEnabled = isBasicTechEnabled.get();
-  console.log('[basic.db] enabled:', basicTechEnabled);
+  // console.log('[basic.db] enabled:', basicTechEnabled);
   const { db, isSignedIn } = useBasic();
   
   // Get remote project data only if BasicTech is enabled

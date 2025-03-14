@@ -6,6 +6,7 @@
     "dev": "astro dev --host",
     "build": "astro build",
     "preview": "deno run --allow-net --allow-read --allow-env --allow-import ./dist/server/entry.mjs",
+    "compile": "astro build && deno compile --allow-net --allow-read --allow-env ./dist/server/entry.mjs",
     "build-preview": "npm run build && npm run preview",
     "deno": "astro build && deno run --allow-net --allow-read --allow-env --watch ./dist/server/entry.mjs",
     "staging": "npm run build && deployctl deploy --project=labnotes --no-static--include=./dist ./dist/server/entry.mjs",

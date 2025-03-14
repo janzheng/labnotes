@@ -10,13 +10,13 @@ export function BasicAuthButton() {
     // Renamed function to avoid naming conflict with destructured getToken
     const fetchToken = async () => {
       if (isSignedIn && user) {
-        const token = await getToken();
+        // const token = await getToken();
         // console.log('Signed in user:', user);
         // console.log('User token:', token);
-        console.log('BasicDB:', {
-          projects: await db.collection('projects').getAll(),
-          workspaces: await db.collection('workspaces').getAll()
-        });
+        // console.log('BasicDB:', {
+        //   projects: await db.collection('projects').getAll(),
+        //   workspaces: await db.collection('workspaces').getAll()
+        // });
       }
     };
     fetchToken();

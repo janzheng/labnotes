@@ -9,11 +9,11 @@ export async function executePipeline(pipeline: any[], settings: any = {}, useLo
 
   try {
     console.log("executePipeline",
-      {
+      JSON.stringify({
         pipelineName: "labnotes",
         pipeline,
         ...settings
-      }
+      })
     );
     const response = await fetch(
       `${HOST}/execute`,
@@ -43,6 +43,7 @@ export async function executePipeline(pipeline: any[], settings: any = {}, useLo
 }
 
 export async function executeStreamingPipeline(pipeline: any[], settings: any = {}, useLocal: boolean = false) {
+  const HOST = useLocal || import.meta.env.MODE === 'development' ? 'http://localhost:9999' : 'https://coverflow.deno.dev';
   const response = await fetch(
     `${HOST}/stream-function`,
     {

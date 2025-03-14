@@ -91,7 +91,7 @@ const ThreadgirlMenu: React.FC<ThreadgirlMenuProps> = ({
         prompts: [],
         query: "",
         url: '',
-        useCache: true,
+        useCache: false,
         saveCache: true,
       });
 

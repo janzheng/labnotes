@@ -104,7 +104,7 @@ export const threadgirlAction = defineAction({
     prompts: z.array(z.string()).optional().default([]),
     query: z.string().optional().default(""),
     url: z.string().optional().default(""),
-    useCache: z.boolean().default(true),
+    useCache: z.boolean().default(false),
     saveCache: z.boolean().default(true),
   }),
   handler: async ({ command, sources, prompts, query, url, useCache, saveCache }) => {
@@ -116,6 +116,7 @@ export const threadgirlAction = defineAction({
           "name": "getThreadgirlPrompts",
           "settings": {
             "useCache": useCache,
+            "saveCache": saveCache,
           }
         }
       ]
@@ -127,6 +128,7 @@ export const threadgirlAction = defineAction({
           "settings": {
             "query": query,
             "useCache": useCache,
+            "saveCache": true,
           }
         }
       ]
