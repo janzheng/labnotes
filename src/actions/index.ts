@@ -3,6 +3,7 @@ import {
     chatAction, 
     generateImageAction,
     threadgirlAction,
+    bibliographyAction
    } from './canvas/chat-actions';
 
 export const server = {
@@ -10,6 +11,7 @@ export const server = {
     typeC: typeCAction,
     chat: chatAction,
     generateImage: generateImageAction,
-    threadgirl: threadgirlAction
+    threadgirl: threadgirlAction,
+    bibliography: bibliographyAction
   }
 }; 

@@ -305,6 +305,83 @@ export function AISelector({ open, onOpenChange, fromSlashCommand = false, isFlo
       setLoadingOperation(null);
     } else if (option === "set_input") {
       setInputValue(value);
+    } else if (option === "bibliography-action") {
+      try {
+        let selectedText = selectionContent;
+        
+        if (!selectedText && editor) {
+          const slice = editor.state.selection.content();
+          selectedText = editor.storage.markdown.serializer.serialize(slice.content);
+        }
+
+        if (!selectedText.trim()) {
+          toast.error("No text selected to generate bibliography");
+          return;
+        }
+
+        console.log("[AI-SELECTOR] Running bibliography action");
+        
+        // Use the existing loading state management
+        setLoadingOperation('generating_bibliography');
+        
+        // Show a toast to indicate the bibliography is being generated
+        toast.loading("Generating bibliography...", {
+          id: 'bibliography-running',
+          duration: 3000
+        });
+        
+        const { data, error } = await actions.canvas.bibliography({
+          command: 'generateBibliography',
+          text: selectedText.trim(),
+          useCache: true,
+          saveCache: true,
+        });
+
+        if (error) {
+          console.error("[AI-SELECTOR] Bibliography API error:", error);
+          toast.error(`Bibliography error: ${error}`);
+          setLoadingOperation(null);
+          return;
+        }
+        
+        // Ensure we have a result before proceeding
+        if (!data || !data.result) {
+          toast.error("Bibliography generation returned an empty result");
+          setLoadingOperation(null);
+          return;
+        }
+
+        console.log("[AI-SELECTOR] Received Bibliography response:", data);
+        
+        // Dismiss the loading toast
+        toast.dismiss('bibliography-running');
+        
+        // Show success toast
+        toast.success("Bibliography generated!");
+        
+        // Add the result directly to the document
+        if (editor) {
+          const { from, to } = editor.state.selection;
+          editor.chain()
+            .focus()
+            .insertContentAt(
+              to,
+              `\n${data.result}`
+            )
+            .run();
+        }
+        
+        // Clear loading state
+        setLoadingOperation(null);
+        
+        // Close the AI selector
+        onOpenChange(false);
+        
+      } catch (apiError) {
+        console.error("[AI-SELECTOR] API error when generating bibliography:", apiError);
+        toast.error("Failed to communicate with Bibliography API");
+        setLoadingOperation(null);
+      }
     } else if (hasSelection(editor) && ["explain", "improve", "fix", "shorten", "lengthen", "professional", "casual", "simplify"].includes(option)) {
       let selectedText = selectionContent;
       

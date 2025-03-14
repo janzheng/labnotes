@@ -154,62 +154,74 @@ const AISelectorCommands: React.FC<AISelectorCommandsProps> = ({
         {/* Options that only show when text is selected */}
         {hasSelection && (
           <>
-            <CommandItem
-              onSelect={() => onSelect("Explain", "explain")}
-              className="flex items-center"
-            >
-              <Plug className="mr-2 h-4 w-4" />
-              <span>Explain</span>
-            </CommandItem>
-            <CommandItem
-              onSelect={() => onSelect("Improve writing", "improve")}
-              className="flex items-center"
-            >
-              <RefreshCcwDot className="mr-2 h-4 w-4" />
-              <span>Improve writing</span>
-            </CommandItem>
-            <CommandItem
-              onSelect={() => onSelect("Fix spelling and grammar", "fix")}
-              className="flex items-center"
-            >
-              <Check className="mr-2 h-4 w-4" />
-              <span>Fix spelling and grammar</span>
-            </CommandItem>
-            <CommandItem
-              onSelect={() => onSelect("Make shorter", "shorten")}
-              className="flex items-center"
-            >
-              <ArrowDownWideNarrow className="mr-2 h-4 w-4" />
-              <span>Make shorter</span>
-            </CommandItem>
-            <CommandItem
-              onSelect={() => onSelect("Make longer", "lengthen")}
-              className="flex items-center"
-            >
-              <WrapText className="mr-2 h-4 w-4" />
-              <span>Make longer</span>
-            </CommandItem>
-            <CommandItem
-              onSelect={() => onSelect("Change tone to professional", "professional")}
-              className="flex items-center"
-            >
-              <Pencil className="mr-2 h-4 w-4" />
-              <span>Change tone to professional</span>
-            </CommandItem>
-            <CommandItem
-              onSelect={() => onSelect("Change tone to casual", "casual")}
-              className="flex items-center"
-            >
-              <Pencil className="mr-2 h-4 w-4" />
-              <span>Change tone to casual</span>
-            </CommandItem>
-            <CommandItem
-              onSelect={() => onSelect("Simplify language", "simplify")}
-              className="flex items-center"
-            >
-              <Wand2 className="mr-2 h-4 w-4" />
-              <span>Simplify language</span>
-            </CommandItem>
+            <CommandGroup heading="URL Actions">
+              <CommandItem
+                onSelect={() => onSelect("Generate bibliography", "bibliography-action")}
+                className="flex items-center"
+              >
+                <List className="mr-2 h-4 w-4" />
+                <span>Generate bibliography</span>
+              </CommandItem>
+            </CommandGroup>
+
+            <CommandGroup heading="Text Actions">
+              <CommandItem
+                onSelect={() => onSelect("Explain", "explain")}
+                className="flex items-center"
+              >
+                <Plug className="mr-2 h-4 w-4" />
+                <span>Explain</span>
+              </CommandItem>
+              <CommandItem
+                onSelect={() => onSelect("Improve writing", "improve")}
+                className="flex items-center"
+              >
+                <RefreshCcwDot className="mr-2 h-4 w-4" />
+                <span>Improve writing</span>
+              </CommandItem>
+              <CommandItem
+                onSelect={() => onSelect("Fix spelling and grammar", "fix")}
+                className="flex items-center"
+              >
+                <Check className="mr-2 h-4 w-4" />
+                <span>Fix spelling and grammar</span>
+              </CommandItem>
+              <CommandItem
+                onSelect={() => onSelect("Make shorter", "shorten")}
+                className="flex items-center"
+              >
+                <ArrowDownWideNarrow className="mr-2 h-4 w-4" />
+                <span>Make shorter</span>
+              </CommandItem>
+              <CommandItem
+                onSelect={() => onSelect("Make longer", "lengthen")}
+                className="flex items-center"
+              >
+                <WrapText className="mr-2 h-4 w-4" />
+                <span>Make longer</span>
+              </CommandItem>
+              <CommandItem
+                onSelect={() => onSelect("Change tone to professional", "professional")}
+                className="flex items-center"
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                <span>Change tone to professional</span>
+              </CommandItem>
+              <CommandItem
+                onSelect={() => onSelect("Change tone to casual", "casual")}
+                className="flex items-center"
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                <span>Change tone to casual</span>
+              </CommandItem>
+              <CommandItem
+                onSelect={() => onSelect("Simplify language", "simplify")}
+                className="flex items-center"
+              >
+                <Wand2 className="mr-2 h-4 w-4" />
+                <span>Simplify language</span>
+              </CommandItem>
+            </CommandGroup>
           </>
         )}
         

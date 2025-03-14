@@ -48,6 +48,40 @@ export const chatAction = defineAction({
   }
 });
 
+export const bibliographyAction = defineAction({
+  input: z.object({
+    text: z.string(),
+    type: z.string().default('bibliography'),
+  }),
+  handler: async ({ text, type }) => {
+    console.log('>>>>>> [bibliographyAction] text', text);
+    let result = await executePipeline([
+      {
+        "name": "getContent",
+        "settings": {
+          "url": text,
+          "optionStr": "citation,doi",
+          "crawlMode": "jina", 
+          "outputMode": "json",
+          "citationType": type
+        }
+      }
+    ], {
+      useCache: true,
+      saveCache: true,
+    });
+
+    console.log('>>>>>> [bibliographyAction] result', result);
+    return {
+      text,
+      settings: { type },
+      result: `DOI:${result.doi}\n${result.citation}`,
+      timestamp: new Date().toISOString(),
+      id: nanoid()
+    };
+  }
+});
+
 export const generateImageAction = defineAction({
   input: z.object({
     prompt: z.string(),
@@ -104,7 +138,7 @@ export const threadgirlAction = defineAction({
     prompts: z.array(z.string()).optional().default([]),
     query: z.string().optional().default(""),
     url: z.string().optional().default(""),
-    useCache: z.boolean().default(false),
+    useCache: z.boolean().default(true),
     saveCache: z.boolean().default(true),
   }),
   handler: async ({ command, sources, prompts, query, url, useCache, saveCache }) => {
